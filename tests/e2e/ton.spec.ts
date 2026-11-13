@@ -13,11 +13,11 @@
  *   QR), and no more once the viewer closes it; TON stays disconnected and the menu usable.
  * - A "TON Connect" that can't start — our list unreadable (the SDK would fall back to its own: remote icons, other
  *   bridges), then TON Connect UI's chunk unreachable — opens no modal and reopens our menu with the reason.
- * - A TON contract call (D35): USDT on TON → USDC on Base through Symbiosis, its API answering with the SDK's recorded
- *   quote (tests/unit/execute/symbiosisTon.fixture.json, for the address it was built for). The one TON Connect request
- *   is the payer's USDT jetton wallet, the TON the venue attached, and the venue's exact BoC; an answer tampered after
- *   the review (the same jetton wallet, non-bounceable: the venue's own check reads only the raw address) is refused
- *   before the wallet is asked.
+ * - A TON contract call (D35): USDT on TON → USDC on Arbitrum (a direct release) through Symbiosis, its API answering
+ *   with a dry quote recorded 2026-11-13 (tests/unit/execute/symbiosisTon.fixture.json, for the address it was built
+ *   for). The one TON Connect request is the payer's USDT jetton wallet, the TON the venue attached, and the venue's
+ *   exact BoC; an answer tampered after the review (the same jetton wallet, non-bounceable: the venue's own check reads
+ *   only the raw address) is refused before the wallet is asked.
  */
 import {readFileSync} from "node:fs";
 import {Address, beginCell, storeMessage} from "@ton/core";
@@ -259,8 +259,9 @@ test("TON: a TON Connect that can't start opens no modal and reopens our menu wi
 
 // ── a TON contract call: Symbiosis paid in USDT (D35) ───────────────────────────────────────────────────────────────
 
-/** The SDK's recorded Symbiosis quote: 50 USDT on TON → USDC on Base, built for the module's TON placeholder. */
-const SYM = (JSON.parse(readFileSync("tests/unit/execute/symbiosisTon.fixture.json", "utf8")) as {sdk: SymbiosisRecording}).sdk;
+/** A recorded Symbiosis dry quote: 50 USDT on TON → USDC on Arbitrum (a direct release), built for the module's TON placeholder. */
+const SYM = (JSON.parse(readFileSync("tests/unit/execute/symbiosisTon.fixture.json", "utf8")) as {live: SymbiosisRecording}).live;
+const USDC_ARB = "arbitrum:0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 interface SymbiosisRecording {
   params: {destAddress: string};
   limits: unknown[];
@@ -312,16 +313,16 @@ async function stubSymbiosis(page: Page, origin: string) {
   return {unexpected, quotes, state};
 }
 
-/** Pay 50 USDT from the fake Tonkeeper (the recording's sender) for USDC on Base to its recipient at 1 %; open the review. */
+/** Pay 50 USDT from the fake Tonkeeper (the recording's sender) for USDC on Arbitrum to its recipient at 0.5 %; open the review. */
 async function reviewSymbiosis(page: Page) {
-  await page.goto(`./#/?pay=${USDT_TON}&receive=${USDC_BASE}&amount=50`);
+  await page.goto(`./#/?pay=${USDT_TON}&receive=${USDC_ARB}&amount=50`);
   await page.getByTestId("swap-refund-connect").click();
   await page.getByTestId("swap-connect-tonconnect:tonkeeper").click();
   await expect(page.getByTestId("swap-wallet-pill-ton")).toBeVisible();
-  // The recording was asked with 1 % slippage: its minimum is under the floor the 0.3 % default would ask for.
+  // The recording was asked with 0.5 % slippage: the review and its live quote are asked as it was.
   await page.getByTestId("swap-slippage").click();
   const sheet = page.getByRole("dialog", {name: "Max slippage"});
-  await sheet.getByRole("group", {name: "Slippage presets"}).getByRole("button", {name: "1%", exact: true}).click();
+  await sheet.getByRole("group", {name: "Slippage presets"}).getByRole("button", {name: "0.5%", exact: true}).click();
   await expect(sheet).toBeHidden();
   await page.getByTestId("swap-recipient").fill(SYM.params.destAddress);
   await expect(page.getByTestId("swap-review")).toHaveText("Review via Symbiosis", {timeout: 30_000});

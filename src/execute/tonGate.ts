@@ -4,7 +4,7 @@
  * wallet signs whatever that request says. So the request is checked too, decoded back from its own BoCs:
  *
  *   - `checkTonPlan` (tonPlan.ts, from checkPlanBrowser): the plan is a deposit with at most a text comment, or a
- *     venue's contract call (TON_CALLS) whose exact BoC passes `checkTonCall`.
+ *     venue's contract call (TON_CALLS) whose exact BoC passes `checkTonCall` — a listed venue only by that call.
  *   - `checkTonRequest` (in the account, right before `sendTransaction`): one message, mainnet, from the reviewed
  *     wallet, valid for at most 5 minutes, no state init; native: the deposit address (its bounce flag too), the
  *     exact amount, the comment or nothing; jetton: the payer's own jetton wallet for the reviewed jetton master,
@@ -14,8 +14,9 @@
  *     through `checkTonCall` again.
  *   - `checkTonCall` (D35): a venue's contract call, read here from its exact BoC — the payer's own jetton wallet,
  *     at most TON_BODY_GAS attached, a TEP-74 transfer of exactly the reviewed amount to one of the venue's pinned
- *     contracts, excess to the payer, no custom payload, less TON forwarded than attached, the venue's instruction in
- *     a reference and nothing after it — then the venue package's own verifier on the same message.
+ *     contracts, excess to the payer, no custom payload, less TON forwarded than attached but at least the venue's
+ *     floor, the venue's instruction in a reference and nothing after it, that instruction through the venue rule's
+ *     own reader (tonPlan.ts TON_CALLS) — then the venue package's own verifier on the same message.
  *   - `pinnedJettonWallet`: the payer's USDT jetton wallet computed here from the jetton's pinned wallet code, so a
  *     public API's answer for it is checked, not trusted.
  *   - `captureTonBody`: the engine's `decodeTonBody` for one TON execution, which keeps the BoC it is handed.
@@ -195,8 +196,12 @@ export function checkTonRequest(req: TonConnectRequest, exp: TonExpected, ctx: {
   return checkJettonBody(payload, exp, ctx.self);
 }
 
-/** Why the cell body is not a TEP-74 transfer of the reviewed call (amount, destination, excess, forward), or null. */
+/**
+ * Why the cell body is not a TEP-74 transfer of the reviewed call (amount, destination, excess, forward), or null —
+ * then the venue's instruction (the forward payload) through the call's own reader.
+ */
 function checkCallBody(body: Cell, call: TonCallExpected, value: bigint, self: string): string | null {
+  let instruction: Cell;
   try {
     const s = body.beginParse();
     if (s.loadUint(32) !== JETTON_TRANSFER_OP) return "the contract call is not a jetton transfer";
@@ -207,14 +212,17 @@ function checkCallBody(body: Cell, call: TonCallExpected, value: bigint, self: s
     if (addressOf(s) !== self) return "the transfer's excess goes to another wallet";
     // Refused, not skipped: a custom payload is acted on by the payer's own jetton wallet.
     if (s.loadBit()) return "the transfer carries a custom payload";
-    if (s.loadCoins() >= value) return "the transfer forwards as much TON as the message attaches, or more";
+    const forward = s.loadCoins();
+    if (forward >= value) return "the transfer forwards as much TON as the message attaches, or more";
+    // Too little and the venue's contract is never notified, or can't pay to act: the jettons would sit with it.
+    if (forward < call.minForwardTon) return "the transfer forwards too little TON for the venue's contract to act on it";
     if (!s.loadBit()) return "the venue's instruction isn't carried in a reference";
-    s.loadRef();
+    instruction = s.loadRef();
     if (s.remainingBits !== 0 || s.remainingRefs !== 0) return "the transfer carries trailing data";
-    return null;
   } catch {
     return "the jetton transfer can't be read";
   }
+  return call.instruction(instruction.beginParse());
 }
 
 /**

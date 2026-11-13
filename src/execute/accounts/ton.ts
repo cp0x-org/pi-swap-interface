@@ -15,7 +15,9 @@
  * A contract call is signed only for the reviewed route's own (`call`, tonPlan.ts tonCallOf; without it a cell body is
  * refused): `getJettonWalletAddress` names the engine that same proven wallet for the call's jetton, and the message —
  * that wallet, bounceable, the TON the write attaches, the write's BoC as its payload, byte for byte — goes through
- * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call.
+ * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call. An account built for a
+ * contract call signs nothing else: no plain TON or jetton deposit (its venue never makes one; checkTonPlan refuses
+ * one first).
  *
  * Outcomes: TON Connect's error answer, or the SDK's own refusal before it hands the request over, is `answered`
  * (nothing was sent), and so is any failure before an installed wallet (JS bridge) got the request. TON Connect's
@@ -187,6 +189,7 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
   const boc = (cell: ReturnType<typeof commentCell>) => Buffer.from(cell.toBoc()).toString("base64");
 
   const unsigned = () => refusal("This TON deposit carries a contract payload, which isn't signed here — nothing was sent.");
+  const callOnly = () => refusal("This route is paid by its TON contract call only; a plain transfer for it isn't signed — nothing was sent.");
 
   return {
     chain: "ton:-239",
@@ -207,6 +210,7 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
         const req = request({address, amount: tx.value.toString(), payload: tx.bodyBoc});
         return send(req, {kind: "jetton-call", jettonWallet: jw, value: tx.value, bodyBoc: tx.bodyBoc, call});
       }
+      if (call) throw callOnly();
       if (tx.body !== undefined && typeof tx.body !== "string") throw unsigned();
       const address = messageAddress(tx.to);
       if (!address || typeof tx.value !== "bigint" || tx.value <= 0n) throw refusal("This TON deposit is malformed — nothing was sent.");
@@ -214,6 +218,7 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
       return send(req, {kind: "native", to: tx.to, value: tx.value, ...(tx.body !== undefined ? {comment: tx.body} : {})});
     },
     async transfer(t) {
+      if (call) throw callOnly();
       only(t, ["token", "recipient", "amount", "memo"], "transfer");
       const recipient = mainnetRaw(t.recipient);
       if (!recipient || typeof t.amount !== "bigint" || t.amount <= 0n || (t.memo !== undefined && typeof t.memo !== "string"))

@@ -327,11 +327,12 @@ Example: your own Ethereum and Base nodes, Symbiosis on, WalletConnect on.
   write: the deposit address, the amount and the comment, or, for a jetton, your own jetton wallet (computed in the
   page from the jetton's pinned wallet code — USDT only for now; other jettons are refused), the jetton amount,
   recipient and excess address. A TON contract call — a USDT transfer carrying the venue's instruction, Symbiosis
-  only for now; Omniston's and anything paid in native TON are refused — is signed only as the exact bytes the venue
-  built, read twice by the page (before anything is armed, and again on the TON Connect message): your own jetton
-  wallet, at most 0.5 TON attached for gas, exactly the reviewed amount to the venue's pinned contract, the excess back
-  to you, no custom payload, then the venue's own verifier (its SDK package) against your reviewed recipient, refund
-  path and minimum. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
+  only for now, to a token it releases directly on an EVM network; Omniston's and anything paid in native TON are
+  refused — is signed only as the exact bytes the venue built, read twice by the page (before anything is armed, and
+  again on the TON Connect message): your own jetton wallet, at most 0.5 TON attached for gas, exactly the reviewed
+  amount to the venue's pinned contract, the excess back to you, no custom payload, enough TON forwarded for the
+  contract to act on it, the instruction's own fee leaving at least your reviewed minimum, then the venue's own
+  verifier (its SDK package) against your reviewed recipient, refund path and minimum. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
   token's `ft_transfer`, to the deposit address), checks receiver, token, amount and memo again and that the account
   can pay the fee before the wallet signs and sends it, then holds the transaction the wallet reports to the one it
   built.

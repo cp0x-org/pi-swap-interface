@@ -244,11 +244,13 @@ export function qrRefusal(route: WebRoute, payChainName: string): RouteRejection
 
 /**
  * Why a TON wallet payer can't take a route: the wallet here signs deposits (TON, jettons) and the contract calls
- * execute checks byte for byte (D35: Symbiosis paid in USDT, `tonCallSigned`), not other contract calls — Omniston's
- * escrow and swap transfers, Symbiosis from another token — which are listed as refused, never offered.
+ * execute checks byte for byte (D35, `tonCallSigned`: Symbiosis paid in USDT for a token it releases directly on an
+ * EVM network), not other contract calls — Omniston's escrow and swap transfers, Symbiosis from another token or to
+ * another destination (Tron, a token it swaps to on arrival) — which are listed as refused, never offered. Without
+ * the token to receive (`to`) no call is offered.
  */
-export function tonWalletRefusal(route: WebRoute, from: Pick<SwapToken, "contract">): RouteRejection | null {
-  if (route.execution !== "calldata" || tonCallSigned(route.provider, from.contract)) return null;
+export function tonWalletRefusal(route: WebRoute, from: Pick<SwapToken, "contract">, to: Pick<SwapToken, "caip2" | "contract"> | undefined): RouteRejection | null {
+  if (route.execution !== "calldata" || (to && tonCallSigned(route.provider, from.contract, to.caip2, to.contract))) return null;
   return {
     provider: route.provider,
     reason: "TON contract calls aren't signed here yet",
@@ -300,7 +302,7 @@ export function routeListModel(
   const routes: WebRoute[] = [];
   const payer: RouteRejection[] = [];
   for (const r of snapshot.routes) {
-    const why = tonWallet ? tonWalletRefusal(r, from) : qrRefusal(r, from!.chainName);
+    const why = tonWallet ? tonWalletRefusal(r, from, to) : qrRefusal(r, from!.chainName);
     if (why) payer.push(why);
     else routes.push(r);
   }

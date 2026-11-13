@@ -211,16 +211,44 @@ describe("routeListModel / qrRefusal (D20)", () => {
     const calls: RouteSnapshot = {...snap, routes: [...snap.routes, call("symbiosis"), call("omniston")], rejections: []};
     const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", chainName: "TON", family: "ton", symbol: "TON", owner: "UQx", payMode: "wallet"};
     const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
-    const m = routeListModel(calls, usdt);
+    const arbUsdc = tok(evmOnly, ARB_USDC);
+    const m = routeListModel(calls, usdt, arbUsdc);
     expect(m.routes.map((r) => r.provider)).toEqual(["near_intents", "thorchain", "symbiosis"]);
     expect(m.refused.map((x) => x.provider)).toEqual(["cctp", "relay", "omniston"]);
     expect(m.refused.at(-1)).toMatchObject({reason: "TON contract calls aren't signed here yet", category: "setup"});
     // Native TON, or a jetton without pinned wallet code: Symbiosis' call is refused too.
-    expect(routeListModel(calls, ton).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
+    expect(routeListModel(calls, ton, arbUsdc).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
     const usde = {...usdt, contract: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"};
-    expect(routeListModel(calls, usde).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
-    expect(tonWalletRefusal(call("symbiosis"), usdt)).toBeNull();
-    expect(tonWalletRefusal(call("symbiosis"), ton)).not.toBeNull();
+    expect(routeListModel(calls, usde, arbUsdc).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
+    expect(tonWalletRefusal(call("symbiosis"), usdt, arbUsdc)).toBeNull();
+    expect(tonWalletRefusal(call("symbiosis"), ton, arbUsdc)).not.toBeNull();
+  });
+  it("Symbiosis from a TON wallet is offered only to a token it releases directly on an EVM network: never to Tron", () => {
+    const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;
+    const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", chainName: "TON", family: "ton", symbol: "TON", owner: "UQx", payMode: "wallet"};
+    const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
+    const tronUsdt: SwapToken = {
+      ...tok(evmOnly, ARB_USDC),
+      key: "tron:tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t",
+      chain: "tron",
+      caip2: "tron:728126428",
+      chainName: "Tron",
+      family: "tron",
+      symbol: "USDT",
+      contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    };
+    // Tron: Symbiosis needs an EVM address of the payer's there, which a TON wallet doesn't have — its dry quote passes on
+    // a placeholder, the live one is refused: listed as refused, never offered (and never "Best").
+    expect(tonWalletRefusal(call("symbiosis"), usdt, tronUsdt)).toMatchObject({provider: "symbiosis", reason: "TON contract calls aren't signed here yet"});
+    // USDC on Base is reached only by a swap after the release; native ETH only by an unwrap.
+    expect(tonWalletRefusal(call("symbiosis"), usdt, tok(evmOnly, BASE_USDC))).not.toBeNull();
+    expect(tonWalletRefusal(call("symbiosis"), usdt, {...tok(evmOnly, ARB_USDC), contract: null})).not.toBeNull();
+    // No token to receive yet: nothing to check the call against, so it isn't offered.
+    expect(tonWalletRefusal(call("symbiosis"), usdt, undefined)).not.toBeNull();
+    expect(tonWalletRefusal(call("symbiosis"), usdt, tok(evmOnly, ARB_USDC))).toBeNull();
+    const calls: RouteSnapshot = {...snap, routes: [...snap.routes, call("symbiosis")], rejections: []};
+    expect(routeListModel(calls, usdt, tronUsdt).refused.map((x) => x.provider)).toContain("symbiosis");
+    expect(routeListModel(calls, usdt, tronUsdt).routes.map((r) => r.provider)).not.toContain("symbiosis");
   });
 });
 
