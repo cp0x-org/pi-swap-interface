@@ -1,5 +1,7 @@
 .git
-.github
+# .github stays out, but its scripts are imported by unit tests that `tsc -b` type-checks in the build
+.github/*
+!.github/scripts
 .idea
 .vscode
 .vercel
