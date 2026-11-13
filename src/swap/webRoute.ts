@@ -13,11 +13,13 @@ import {venueTrust} from "./venues";
  * Venues whose route is always a wallet signature even though the dry quote
  * carries no txRequest: Chainflip's vault call is built only for a live quote,
  * Omniston's EVM source is a typed order, Symbiosis' TON source a jetton
- * transfer a TON wallet signs (chunk-BVFMCR2O.js:363-372, depositAddress "";
- * with btcSource off it never names one), and LI.FI (0.8.0) and USDT0 (0.5.0)
- * return a price-only quote, without its transaction, when it was priced for a
- * placeholder recipient or refund (a preview). Never offered as a deposit
- * address, so a QR payer reads "Needs a wallet that signs" instead of a dead end.
+ * transfer carrying its bridge request — a TON contract call, which a TON
+ * wallet signs only through execute's byte-exact check (D35;
+ * chunk-BVFMCR2O.js:363-372, depositAddress ""; with btcSource off it never
+ * names one), and LI.FI (0.8.0) and USDT0 (0.5.0) return a price-only quote,
+ * without its transaction, when it was priced for a placeholder recipient or
+ * refund (a preview). Never offered as a deposit address, so a QR payer reads
+ * "Needs a wallet that signs" instead of a dead end.
  */
 const SIGNED_ONLY: ReadonlySet<string> = new Set(["chainflip", "omniston", "symbiosis", "lifi", "usdt0"]);
 

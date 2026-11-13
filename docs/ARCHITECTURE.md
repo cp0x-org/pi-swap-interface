@@ -180,11 +180,12 @@ wrap, usdt0, cctp, thorchain, chainflip, near_intents, lifi, relay, symbiosis, j
 chunk, needs IndexedDB, opens its WebSocket on the first quote; 0.5.5 trusts the rev2 TON minter that EVM→TON
 quotes name) defaulted off until
 the owner turned them on (2026-11-12), as cp0x's server runs them: USDT Ethereum → Tron showed fewer routes than the
-wallet. A Symbiosis TON source is a jetton transfer a TON wallet signs, so `executionOf` reads it as signed, never a
-deposit address. Omniston is off (uncounted) until its chunk is in, and a round waits up to 2 s for it
-(`LAZY_WAIT_MS`); between networks it is asked for tokens only (its SDK refuses a native leg locally); on an IPFS
-path gateway it stays off unless the page's operator layer turns it on (its HTLC secret would sit in storage every
-site there shares). An operator's layer or a viewer's Settings can still switch any venue off (D8). Standard only,
+wallet. A Symbiosis TON source is a jetton transfer carrying its bridge request (a TON contract call, D35), so
+`executionOf` reads it as signed, never a deposit address. Omniston is off (uncounted) until its chunk is in, and a
+round waits up to 2 s for it (`LAZY_WAIT_MS`); between networks it is asked for tokens only (its SDK refuses a native
+leg locally); on an IPFS path gateway it stays off unless the page's operator layer turns it on (its HTLC secret
+would sit in storage every site there shares). An operator's layer or a viewer's Settings can still switch any venue
+off (D8). Standard only,
 default on there: `fynd` (2026-11-12; providers.md
 §4.14) — built only on a Standard page, asked only while health says `venues.fynd` is "keyed", through cp0x's proxy
 with cp0x's key; its API sends no CORS headers, so there is no direct fallback, and Public and Custom never build it
@@ -478,9 +479,11 @@ display, the refund address and the review); the connected wallet's name comes f
 `https://swap.cp0x.com`, its apple-touch-icon); a copy on another origin serves its own (README; the dist guard
 allows that file to name its page's origin and nothing else). `getSigner("ton:-239")` → `TonSourceSigner` (the
 connector as `TonSender`, raw and friendly address, `tonApiUrl`). TON balances come from TonAPI
-(`catalog/balances/ton.ts`), asked only for a connected TON wallet. Omniston's TON source (an escrow transfer with a
-cell body) is not wired: `checkTonPlan` refuses cell bodies and the route list lists such routes as refused for a
-TON wallet ("TON contract calls aren't signed here yet").
+(`catalog/balances/ton.ts`), asked only for a connected TON wallet. A TON contract call (a jetton transfer whose
+forward payload is the venue's instruction, a cell body) is signed only as D35 lists it — Symbiosis paid in USDT;
+Omniston's TON source (an escrow or a TON → TON swap) and Symbiosis from native TON are not wired: `checkTonPlan`
+refuses their cell bodies and the route list lists such routes as refused for a TON wallet ("TON contract calls
+aren't signed here yet").
 
 **D12 — EVM engine account.** engine.md §6.1 as written: reads, gas quotes and `eth_call` simulation through
 `WalletAccountReadOnlyEvm` over the runtime RPC list; writes through the viem `WalletClient`; `getChainId()` from
@@ -1120,19 +1123,24 @@ expectation taken from the reviewed route, never from the quote; no existing che
 one. Mobile signs both venues through the same engine hooks (its execute.ts, pins.ts); the web binds the jetton wallet
 to the pinned wallet code instead of the jetton master's answer over RPC, and decodes the transfer itself instead of
 trusting the engine's summary (which skips a custom payload and doesn't read the destination).
-- **Part A — the plumbing.**
+- **Part A — the plumbing, and Symbiosis paid in USDT (TON → EVM).**
   - *Engine.* For a TON payer only, `engineConfig` gets `decodeTonBody` (tonGate.ts `captureTonBody`: keeps the BoC it
     is handed, refuses anything but one ordinary root cell, returns a frozen `{__bocBase64, beginParse}` — the engine
-    reads the transfer before the review) and `tonGasCeiling: TON_BODY_GAS` (0.5 TON; the engine's default is 1 TON).
-    `arm` hands that BoC to `checkPlanBrowser` and `planWrites(plan, boc)`: the write armed is the BoC read.
-  - *Plan.* `checkTonPlan`'s blanket refusal became the venue rule `TON_CALLS` (tonPlan.ts), empty for now: a listed
-    venue only, paid only in a listed jetton with pinned wallet code (never native TON), no calldata or memo, and the
-    captured BoC through `checkTonCall` (tonGate.ts): sent bounceable to the payer's own jetton wallet computed from
-    the pinned code (no API asked), at most 0.5 TON attached, one ordinary root read as a TEP-74 transfer — op
-    `0x0f8a7ea5`, exactly the reviewed amount, to one of the venue's pinned contracts, excess to the payer, a custom
-    payload refused (not skipped), less TON forwarded than attached, the instruction in a reference and nothing
-    after it — then the venue package's own verifier on the same message, its request rebuilt from the review.
-    checkPlan's own checks (minimum ≥ the reviewed one, gas only for a jetton source) still run first.
+    reads the transfer before the review) and `tonGasCeiling: TON_BODY_GAS` (0.5 TON; the engine's default and the
+    package's own ceiling are 1 TON). `arm` hands that BoC to `checkPlanBrowser` and `planWrites(plan, boc)`: the write
+    armed is the BoC read.
+  - *Plan.* `checkTonPlan`'s blanket refusal became the venue rule `TON_CALLS` (tonPlan.ts): a listed venue only
+    (Symbiosis), paid only in a listed jetton with pinned wallet code (USDT; native TON and other jettons refused), no
+    calldata or memo, and the captured BoC through `checkTonCall` (tonGate.ts): sent bounceable to the payer's own
+    jetton wallet computed from the pinned code (no API asked), at most 0.5 TON attached, one ordinary root read as a
+    TEP-74 transfer — op `0x0f8a7ea5`, exactly the reviewed amount, to one of the venue's pinned contracts (Symbiosis'
+    TON Portal, from its package's config), excess to the payer, a custom payload refused (not skipped), less TON
+    forwarded than attached, the instruction in a reference and nothing after it — then the package's verifier on the
+    same message: `checkSymbiosisTonMessage(symbiosisRequest(params), msg, reviewed.minOut)`, `params` rebuilt from
+    the review (tokens, amount, recipient, the payer as sender), which decodes the bridge request against its pins —
+    host chain, pools, the burn paying the reviewed recipient, a revert address that is the payer's or Symbiosis'
+    pinned revert service, at least the reviewed minimum. checkPlan's own checks (minimum ≥ the reviewed one, gas
+    only for a jetton source) still run first.
   - *Gate.* The engine hands the account the decoded body; on a TON gate `gateAccount` turns it into `bodyBoc` (the
     BoC it carries) before the frozen copy, which can't copy a Cell, so `matches` holds it to the armed BoC byte for
     byte; any other non-text body is refused. `getJettonWalletAddress` passes as a read.
@@ -1144,6 +1152,22 @@ trusting the engine's summary (which skips a custom payload and doesn't read the
     (the `jetton` kind is unchanged) holds it to the envelope (one message, mainnet, the reviewed wallet, ≤ 5 min, no
     state init), the proven wallet, bounceable, the exact TON amount, the armed BoC (same string, same cell hash), and
     runs `checkTonCall` on it again.
+  - *Route list.* `tonWalletRefusal` lifts "TON contract calls aren't signed here yet" only for Symbiosis paid in USDT
+    (`tonCallSigned`); Omniston (escrows and TON → TON swaps) and Symbiosis from native TON stay refused.
+  - *Still trusted*, as on the phone: Symbiosis' contracts, relayers and revert service, and the level of the minimum
+    (its API's); the gas it attaches (0.2 TON in both recordings), capped at 0.5 TON, the excess refunded. The review
+    says "+ network fee in TON", not the attached amount. Only routes the package can bind quote from TON (live on
+    2026-11-13: USDC on Arbitrum, a direct release; a destination swap was refused by the package at quote time).
+  - *Tests.* `tests/unit/execute/tonCall.test.ts` over `symbiosisTon.fixture.json` — the SDK's recording (USDC on
+    Base) and a dry quote captured 2026-11-13 (USDC on Arbitrum): the pass case and every tampered field, at the plan
+    and on the TON Connect message (target, non-bounceable, gas > 0.5 TON, op, amount, destination, excess, custom
+    payload, forward ≥ value, inline or trailing data, another body or encoding, two messages, state init, the
+    bridge request's recipient and revert address, the reviewed recipient and minimum, native TON, another jetton,
+    another venue); the real engine and the real Symbiosis provider over those recordings through executeSwap to a
+    fake TON Connect wallet (one request: the jetton wallet, 0.2 TON, the exact BoC; three tampered answers refused
+    before the wallet); `gated.ts` with the decoded body. `tests/e2e/ton.spec.ts`: a fake Tonkeeper pays 50 USDT
+    through Symbiosis' stubbed API — the one request is the jetton wallet, the TON attached and the exact BoC — and an
+    answer tampered after the review (the same wallet, non-bounceable) is refused before the wallet is asked.
 
 ---
 

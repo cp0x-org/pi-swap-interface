@@ -1,0 +1,416 @@
+{
+  "sdk": {
+    "note": "@anywalletkit/protocol-swap2-symbiosis 0.1.1 tests/fixtures/ton-usdt-base-usdc.json: 50 USDT on TON -> USDC on Base, sent from the module's TON placeholder (the answer it accepted; the swap limits of the chains involved)",
+    "recordedAt": "2026-11-09",
+    "params": {
+      "sourceChain": "ton:-239",
+      "sourceToken": "USDT",
+      "destChain": "eip155:8453",
+      "destToken": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "amountIn": "50000000",
+      "destAddress": "0x28C6c06298d514Db089934071355E5743bf21d60",
+      "refundAddress": "UQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqEBI",
+      "slippageBps": 100
+    },
+    "limits": [
+      {
+        "chainId": 8453,
+        "address": "0x4200000000000000000000000000000000000006",
+        "min": "100000000000000",
+        "max": "50000000000000000000",
+        "decimals": 18
+      },
+      {
+        "chainId": 8453,
+        "address": "",
+        "min": "100000000000000",
+        "max": "50000000000000000000",
+        "decimals": 18
+      },
+      {
+        "chainId": 8453,
+        "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+        "min": "300000",
+        "max": "200000000000",
+        "decimals": 6
+      },
+      {
+        "chainId": 85918,
+        "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+        "min": "300000",
+        "max": "200000000000",
+        "decimals": 6
+      }
+    ],
+    "response": {
+      "fee": {
+        "symbol": "USDbC",
+        "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+        "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+        "amount": "250000",
+        "chainId": 8453,
+        "decimals": 6,
+        "priceUsd": 0.9996348
+      },
+      "route": [],
+      "inTradeType": "symbiosis",
+      "outTradeType": "symbiosis",
+      "fees": [
+        {
+          "provider": "symbiosis",
+          "value": {
+            "symbol": "sUSDT",
+            "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+            "address": "0x8D8Ce7Bf0C7f7a368Bb92087Fc9D474d2DffC072",
+            "amount": "250000",
+            "chainId": 13863860,
+            "decimals": 6,
+            "attributes": {
+              "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+            },
+            "priceUsd": 1
+          },
+          "save": {
+            "symbol": "sUSDT",
+            "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+            "address": "0x8D8Ce7Bf0C7f7a368Bb92087Fc9D474d2DffC072",
+            "amount": "0",
+            "chainId": 13863860,
+            "decimals": 6,
+            "attributes": {
+              "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+            },
+            "priceUsd": 1
+          },
+          "description": "Cross-chain fee"
+        },
+        {
+          "provider": "symbiosis",
+          "value": {
+            "symbol": "USDbC",
+            "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+            "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+            "amount": "250000",
+            "chainId": 8453,
+            "decimals": 6,
+            "priceUsd": 0.9996348
+          },
+          "save": {
+            "symbol": "USDbC",
+            "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+            "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+            "amount": "0",
+            "chainId": 8453,
+            "decimals": 6,
+            "priceUsd": 0.9996348
+          },
+          "description": "Cross-chain fee"
+        }
+      ],
+      "routes": [
+        {
+          "provider": "symbiosis",
+          "tokens": [
+            {
+              "symbol": "USDT",
+              "name": "USDt",
+              "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+              "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+              "chainId": 85918,
+              "decimals": 6,
+              "priceUsd": 0,
+              "attributes": {
+                "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+              }
+            },
+            {
+              "symbol": "USDbC",
+              "name": "USD Base Coin",
+              "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+              "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+              "chainId": 8453,
+              "decimals": 6,
+              "priceUsd": 0.9996348
+            }
+          ]
+        },
+        {
+          "provider": "uni-v2",
+          "tokens": [
+            {
+              "symbol": "USDbC",
+              "name": "USD Base Coin",
+              "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+              "address": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA",
+              "chainId": 8453,
+              "decimals": 6,
+              "priceUsd": 0.9996348
+            },
+            {
+              "symbol": "USDC",
+              "name": "tokenName",
+              "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "chainId": 8453,
+              "decimals": 6,
+              "priceUsd": 0.999483
+            }
+          ]
+        }
+      ],
+      "labels": [
+        "octopool-swap",
+        "dst-chain-swap"
+      ],
+      "kind": "crosschain-swap",
+      "priceImpact": "-2.31",
+      "tokenAmountOut": {
+        "symbol": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "amount": "48364358",
+        "chainId": 8453,
+        "decimals": 6,
+        "priceUsd": 0.999483
+      },
+      "tokenAmountOutMin": {
+        "symbol": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "amount": "47885017",
+        "chainId": 8453,
+        "decimals": 6,
+        "priceUsd": 0.999483
+      },
+      "amountInUsd": {
+        "symbol": "tokenIn",
+        "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+        "amount": "50000000",
+        "chainId": 85918,
+        "decimals": 6,
+        "attributes": {
+          "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+        },
+        "priceUsd": 0
+      },
+      "approveTo": "0x0000000000000000000000000000000000000000",
+      "type": "ton",
+      "rewards": [],
+      "estimatedTime": 28,
+      "tx": {
+        "validUntil": 1794873527,
+        "messages": [
+          {
+            "address": "EQAvLzOubdnAtv7gjO9ZfrAKnVklFS_4xG7iQXzrfyllmImd",
+            "amount": "200000000",
+            "payload": "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"
+          }
+        ]
+      }
+    },
+    "quote": {
+      "destAmount": "48364358",
+      "minDestAmount": "47885017",
+      "tonTo": "EQAvLzOubdnAtv7gjO9ZfrAKnVklFS_4xG7iQXzrfyllmImd",
+      "tonValue": "200000000",
+      "tonBody": "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"
+    }
+  },
+  "live": {
+    "note": "a dry quote from api.symbiosis.finance (read-only, nothing signed): 50 USDT on TON -> USDC on Arbitrum, a direct release, for the module's placeholder sender and recipient",
+    "recordedAt": "2026-11-13",
+    "params": {
+      "sourceChain": "ton:-239",
+      "sourceToken": "USDT",
+      "destChain": "eip155:42161",
+      "destToken": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "amountIn": "50000000",
+      "destAddress": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "refundAddress": "EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N",
+      "slippageBps": 50
+    },
+    "limits": [
+      {
+        "chainId": 42161,
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "min": "300000",
+        "max": "200000000000",
+        "decimals": 6
+      },
+      {
+        "chainId": 42161,
+        "address": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+        "min": "300000",
+        "max": "200000000000",
+        "decimals": 6
+      },
+      {
+        "chainId": 42161,
+        "address": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "min": "100000000000000",
+        "max": "50000000000000000000",
+        "decimals": 18
+      },
+      {
+        "chainId": 42161,
+        "address": "",
+        "min": "100000000000000",
+        "max": "50000000000000000000",
+        "decimals": 18
+      },
+      {
+        "chainId": 85918,
+        "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+        "min": "300000",
+        "max": "200000000000",
+        "decimals": 6
+      }
+    ],
+    "response": {
+      "fee": {
+        "symbol": "USDC",
+        "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "amount": "250000",
+        "chainId": 42161,
+        "decimals": 6,
+        "priceUsd": 1
+      },
+      "route": [],
+      "inTradeType": "symbiosis",
+      "outTradeType": "symbiosis",
+      "fees": [
+        {
+          "provider": "symbiosis",
+          "value": {
+            "symbol": "sUSDT",
+            "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+            "address": "0x8D8Ce7Bf0C7f7a368Bb92087Fc9D474d2DffC072",
+            "amount": "250000",
+            "chainId": 13863860,
+            "decimals": 6,
+            "attributes": {
+              "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+            },
+            "priceUsd": 1
+          },
+          "save": {
+            "symbol": "sUSDT",
+            "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+            "address": "0x8D8Ce7Bf0C7f7a368Bb92087Fc9D474d2DffC072",
+            "amount": "0",
+            "chainId": 13863860,
+            "decimals": 6,
+            "attributes": {
+              "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+            },
+            "priceUsd": 1
+          },
+          "description": "Cross-chain fee"
+        },
+        {
+          "provider": "symbiosis",
+          "value": {
+            "symbol": "USDC",
+            "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+            "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+            "amount": "250000",
+            "chainId": 42161,
+            "decimals": 6,
+            "priceUsd": 1
+          },
+          "save": {
+            "symbol": "USDC",
+            "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+            "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+            "amount": "0",
+            "chainId": 42161,
+            "decimals": 6,
+            "priceUsd": 1
+          },
+          "description": "Cross-chain fee"
+        }
+      ],
+      "routes": [
+        {
+          "provider": "symbiosis",
+          "tokens": [
+            {
+              "symbol": "USDT",
+              "name": "USDt",
+              "icon": "https://s3.openocean.finance/token_logos/logos/1642600369413_5107823985163122.jpg",
+              "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+              "chainId": 85918,
+              "decimals": 6,
+              "priceUsd": 0,
+              "attributes": {
+                "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+              }
+            },
+            {
+              "symbol": "USDC",
+              "name": "USD Coin",
+              "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+              "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+              "chainId": 42161,
+              "decimals": 6,
+              "priceUsd": 1
+            }
+          ]
+        }
+      ],
+      "labels": [
+        "octopool-swap"
+      ],
+      "kind": "crosschain-swap",
+      "priceImpact": "-0.26",
+      "tokenAmountOut": {
+        "symbol": "USDC",
+        "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "amount": "49367316",
+        "chainId": 42161,
+        "decimals": 6,
+        "priceUsd": 1
+      },
+      "tokenAmountOutMin": {
+        "symbol": "USDC",
+        "icon": "https://s2.coinmarketcap.com/static/img/coins/128x128/3408.png",
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "amount": "49268081",
+        "chainId": 42161,
+        "decimals": 6,
+        "priceUsd": 1
+      },
+      "amountInUsd": {
+        "symbol": "tokenIn",
+        "address": "0x9328Eb759596C38a25f59028B146Fecdc3621Dfe",
+        "amount": "50000000",
+        "chainId": 85918,
+        "decimals": 6,
+        "attributes": {
+          "ton": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+        },
+        "priceUsd": 0
+      },
+      "approveTo": "0x0000000000000000000000000000000000000000",
+      "type": "ton",
+      "rewards": [],
+      "estimatedTime": 37,
+      "tx": {
+        "validUntil": 1795199999,
+        "messages": [
+          {
+            "address": "EQAvLzOubdnAtv7gjO9ZfrAKnVklFS_4xG7iQXzrfyllmImd",
+            "amount": "200000000",
+            "payload": "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"
+          }
+        ]
+      }
+    },
+    "quote": {
+      "destAmount": "49367316",
+      "minDestAmount": "49268081",
+      "tonTo": "EQAvLzOubdnAtv7gjO9ZfrAKnVklFS_4xG7iQXzrfyllmImd",
+      "tonValue": "200000000",
+      "tonBody": "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"
+    }
+  }
+}

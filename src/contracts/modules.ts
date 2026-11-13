@@ -189,6 +189,8 @@ export interface ExecuteModule {
   swapFeeCap(family: ChainFamily, opts: {chainId?: number; nativeSymbol: string; decimals: number; nativePriceUsd?: number}): bigint | undefined;
   uncappedFeeText(nativeSymbol: string): string;
   FEE_CEILING: Readonly<Partial<Record<ChainFamily, bigint>>>;
+  /** Whether a TON wallet here signs `provider`'s contract call paid in `contract` (null = native TON; D35). */
+  tonCallSigned(provider: string, contract: string | null): boolean;
 }
 
 /** src/activity/index.ts */

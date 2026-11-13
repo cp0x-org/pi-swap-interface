@@ -93,7 +93,7 @@ The venues are independent services with their own rules, and cp0x cannot change
 | NEAR Intents (1Click) | cross-chain intents, including deposit-address routes for BTC, ZEC and others | 1Click API | API | on |
 | LI.FI | bridge and DEX aggregator (EVM, Solana) | LI.FI API | API | on |
 | Relay | cross-chain fills | Relay API | API | on |
-| Symbiosis | cross-chain swaps between EVM chains, to Tron and to TON | Symbiosis API (paced to 1 request/s; in Standard mode through cp0x's proxy while cp0x holds its key) | API | on |
+| Symbiosis | cross-chain swaps between EVM chains, to Tron and to TON, and from a TON wallet's USDT to EVM chains | Symbiosis API (paced to 1 request/s; in Standard mode through cp0x's proxy while cp0x holds its key) | API | on |
 | Jupiter | Solana swaps | Jupiter API | API | on |
 | Omniston (STON.fi) | HTLC orders between EVM chains | Omniston WebSocket (needs site storage) | API | on |
 | Fynd (Propeller Heads) | same-chain swaps over Tycho-indexed pools, settled through the Tycho router | Fynd API, through cp0x's proxy | API | Standard mode only |
@@ -264,7 +264,7 @@ key in it.** An RPC key is only acceptable if its provider restricts it to your 
 | `evmRpc.<chainId>` | public RPCs per chain | JSON-RPC URLs tried in order. Used for balances, simulation, provider reads and the wallet's chain definitions. |
 | `solanaRpc` | publicnode, solanavibestation | Solana RPCs tried in order. `api.mainnet-beta.solana.com` is left out because it refuses browser origins. |
 | `nearRpc` | FastNear | NEAR RPCs tried in order, asked directly in every mode, only once a NEAR wallet is connected. `[]` = no NEAR reads: balances stay unknown and a NEAR wallet's deposits are refused before signing. |
-| `tonApiUrl` | `https://tonapi.io` | TonAPI base: a connected TON wallet's balances and the jetton wallet a jetton deposit leaves from; Omniston. |
+| `tonApiUrl` | `https://tonapi.io` | TonAPI base: a connected TON wallet's balances and the jetton wallet a jetton deposit or contract call leaves from (checked against the address the page computes, never trusted); Omniston. |
 | `tronApi` | publicnode, TronGrid | Tron full-node HTTP APIs (`/wallet/*`) tried in order: balances, and a TronLink payment's reference block, broadcast and receipt. Asked only once a Tron wallet is connected. |
 | `api.nearIntents` | `https://1click.chaindefuser.com/v0` | NEAR Intents 1Click API. |
 | `api.lifi` | `https://li.quest/v1` | LI.FI API. |
@@ -326,7 +326,12 @@ Example: your own Ethereum and Base nodes, Symbiosis on, WalletConnect on.
   them itself. On TON, the one TON Connect message the wallet gets is decoded back and checked against the same
   write: the deposit address, the amount and the comment, or, for a jetton, your own jetton wallet (computed in the
   page from the jetton's pinned wallet code — USDT only for now; other jettons are refused), the jetton amount,
-  recipient and excess address. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
+  recipient and excess address. A TON contract call — a USDT transfer carrying the venue's instruction, Symbiosis
+  only for now; Omniston's and anything paid in native TON are refused — is signed only as the exact bytes the venue
+  built, read twice by the page (before anything is armed, and again on the TON Connect message): your own jetton
+  wallet, at most 0.5 TON attached for gas, exactly the reviewed amount to the venue's pinned contract, the excess back
+  to you, no custom payload, then the venue's own verifier (its SDK package) against your reviewed recipient, refund
+  path and minimum. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
   token's `ft_transfer`, to the deposit address), checks receiver, token, amount and memo again and that the account
   can pay the fee before the wallet signs and sends it, then holds the transaction the wallet reports to the one it
   built.

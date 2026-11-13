@@ -8,3 +8,4 @@ export {maybeSent, swapErrorText, swapFailureExpected, WALLET_DECLINED_TEXT} fro
 export {decodeSwapId, encodeSwapId} from "./ids";
 export {FEE_CEILING, swapFeeCap, uncappedFeeText, SwapGateRefusal, SwapReviewMismatch} from "./gate";
 export {SOLANA_FEE_CEILING} from "./accounts/solana";
+export {tonCallSigned} from "./tonPlan";

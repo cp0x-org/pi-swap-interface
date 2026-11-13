@@ -11,6 +11,7 @@
 import type {RecipientCheck, SwapRecipient, SwapToken} from "../../contracts/domain";
 import type {PreviewRequest, QuoteRequest, RouteRejection, RouteSnapshot, RoutesRequest, RoutesState, WebRoute} from "../../contracts/routes";
 import type {WalletFamily} from "../../contracts/wallets";
+import {tonCallSigned} from "../../execute";
 import {canPreview, routesKey, venueScope} from "../../swap";
 import {FAMILY_LABEL, agoLabel, plural, walletFamilyOf} from "../labels";
 
@@ -242,17 +243,18 @@ export function qrRefusal(route: WebRoute, payChainName: string): RouteRejection
 }
 
 /**
- * Why a TON wallet payer can't take a route: the wallet here signs deposits (TON, jettons), not the contract call
- * Omniston's escrow transfer is (not wired yet, execute checkTonPlan) — listed as refused, never offered.
+ * Why a TON wallet payer can't take a route: the wallet here signs deposits (TON, jettons) and the contract calls
+ * execute checks byte for byte (D35: Symbiosis paid in USDT, `tonCallSigned`), not other contract calls — Omniston's
+ * escrow and swap transfers, Symbiosis from another token — which are listed as refused, never offered.
  */
-export function tonWalletRefusal(route: WebRoute): RouteRejection | null {
-  if (route.execution !== "calldata") return null;
+export function tonWalletRefusal(route: WebRoute, from: Pick<SwapToken, "contract">): RouteRejection | null {
+  if (route.execution !== "calldata" || tonCallSigned(route.provider, from.contract)) return null;
   return {
     provider: route.provider,
     reason: "TON contract calls aren't signed here yet",
     category: "setup",
     detail: "This route pays through a TON contract call, which a TON wallet can't sign in this app yet; routes paid to a deposit address work.",
-    raw: "app: the route is a TON contract call (execution: calldata); a TON wallet here signs deposits only",
+    raw: "app: the route is a TON contract call (execution: calldata) the app has no byte-exact check for; a TON wallet here signs deposits and checked calls only",
   };
 }
 
@@ -267,8 +269,9 @@ export function coverageLine(snapshot: Pick<RouteSnapshot, "asked" | "venues"> |
 
 /**
  * Split the snapshot for the payer: a deposit-only payer (BTC, ZEC…) can only
- * take `execution === "deposit" && !hasMemo` routes, a TON wallet only deposit
- * routes (a memo rides as the comment); the rest are listed as refused with the
+ * take `execution === "deposit" && !hasMemo` routes, a TON wallet deposit
+ * routes (a memo rides as the comment) and the contract calls execute checks
+ * (tonWalletRefusal); the rest are listed as refused with the
  * reason, never offered. `to` names the scope of each enabled venue that wasn't
  * asked; `missing` words the venues a preview left for the live quote
  * (deferredCopy), which never count as refused; `held` the routes quoted for
@@ -297,7 +300,7 @@ export function routeListModel(
   const routes: WebRoute[] = [];
   const payer: RouteRejection[] = [];
   for (const r of snapshot.routes) {
-    const why = tonWallet ? tonWalletRefusal(r) : qrRefusal(r, from!.chainName);
+    const why = tonWallet ? tonWalletRefusal(r, from) : qrRefusal(r, from!.chainName);
     if (why) payer.push(why);
     else routes.push(r);
   }

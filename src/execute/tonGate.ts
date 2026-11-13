@@ -21,7 +21,7 @@
  *   - `captureTonBody`: the engine's `decodeTonBody` for one TON execution, which keeps the BoC it is handed.
  *
  * Pure (@ton/core's cell codec, and the venues' own verifiers through tonPlan.ts), and loaded with the TON account
- * only (a lazy chunk, beside Omniston's) — unit-tested in tests/unit/execute/ton.test.ts.
+ * only (a lazy chunk, beside Omniston's) — unit-tested in tests/unit/execute/ton.test.ts and tonCall.test.ts.
  */
 import {Buffer} from "buffer";
 import {Address, Cell, beginCell, contractAddress, loadMessage, storeMessage, type Slice} from "@ton/core";

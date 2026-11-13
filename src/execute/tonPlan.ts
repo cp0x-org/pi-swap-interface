@@ -2,18 +2,24 @@
  * checkPlanBrowser's TON rule (D10, D35): what a TON source may be before anything is armed. A deposit — TON to an
  * address, or a jetton transfer, with at most a text comment — and every address a mainnet one (EQ…/UQ… with its
  * checksum, or raw on workchain 0 / -1); never an approval. A contract payload (a cell body) only as a venue's TON
- * contract call listed in TON_CALLS — none yet — and only when its exact BoC passes tonGate.ts's
+ * contract call listed in TON_CALLS — Symbiosis paid in USDT today — and only when its exact BoC passes tonGate.ts's
  * checkTonCall: the app's own decode of the jetton transfer, then the venue package's verifier, both held to the
  * reviewed route. The message the wallet then signs is checked again in tonGate.ts.
  *
  * No @ton/core here (the main bundle): the BoC is read by the TON chunk, which execute.ts hands in as `TonBodyCheck`.
  */
 import type {Swap2ExecutionPlan} from "@anywalletkit/protocol-swap2-core/swap2/base";
+import {SYMBIOSIS_TON_PORTAL_RAW} from "@anywalletkit/protocol-swap2-symbiosis/config";
+import {checkSymbiosisTonMessage, symbiosisRequest} from "@anywalletkit/protocol-swap2-symbiosis/verify";
+import {ccAssetByToken} from "@anywalletkit/swap2-assets";
 import {isAddressFor, toRawAddress} from "../catalog";
 import type {ReviewedSwap} from "../contracts/execution";
 
 /** A TON mainnet address in a strict form (no test-only friendly address, no other workchain). */
 const mainnet = (a: string): boolean => isAddressFor("ton", a) && (!a.includes(":") || /^(-1|0):/.test(a));
+
+/** USDT's jetton master on TON (raw): the one jetton whose wallet code the app pins (tonGate.ts PINNED_JETTON_CODE). */
+export const TON_USDT = "0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe";
 
 /** A TON contract call's message: where it is sent, the TON it attaches, its cell body (a base64 BoC). */
 export interface TonCallMessage {
@@ -36,10 +42,42 @@ interface TonCallRule {
 }
 
 /**
+ * Symbiosis' check of a TON-source message (`checkSymbiosisTonMessage`): one jetton transfer of the sell amount to its
+ * pinned TON Portal, the bridge request decoded against its pins — the host chain, its pools, the burn on the
+ * destination — crediting only the reviewed recipient, reverted only by the payer's addresses or Symbiosis' pinned
+ * revert service, and guaranteeing at least the reviewed minimum. The request is the reviewed route's, never the quote's.
+ */
+function symbiosisTonCall(r: ReviewedSwap, msg: TonCallMessage): string | null {
+  const sell = r.fromContract === null ? undefined : ccAssetByToken(r.fromChain, r.fromContract);
+  if (!sell?.contract || toRawAddress(sell.contract) !== toRawAddress(r.fromContract!)) return "symbiosis: the token you pay isn't the catalog's";
+  const req = symbiosisRequest({
+    sourceChain: r.fromChain,
+    sourceToken: sell.symbol,
+    destChain: r.destChain,
+    destToken: r.destToken,
+    amountIn: r.amountIn.toString(),
+    destAddress: r.recipient,
+    refundAddress: r.refundAddress,
+  });
+  if (typeof req === "string") return `symbiosis: ${req}`;
+  if (req.sellToken === null || toRawAddress(req.sellToken) !== toRawAddress(r.fromContract!)) return "symbiosis: the token you pay isn't the catalog's";
+  try {
+    checkSymbiosisTonMessage(req, {to: msg.to, value: msg.value.toString(), bodyBoc: msg.bodyBoc}, r.minOut);
+    return null;
+  } catch (e) {
+    return `symbiosis: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
+/**
  * Venue → its TON contract call. A venue missing here never gets a cell body signed from a TON wallet; each one comes
  * with its package's verifier and tests of its own.
  */
-export const TON_CALLS: Readonly<Record<string, TonCallRule>> = {};
+export const TON_CALLS: Readonly<Record<string, TonCallRule>> = {
+  // A jetton transfer to the pinned TON Portal carrying the bridge request. USDT, the jetton the package bridges; TON's
+  // native coin leaves through a partner exchange, which the package refuses.
+  symbiosis: {jettons: [TON_USDT], destinations: [SYMBIOSIS_TON_PORTAL_RAW], verify: symbiosisTonCall},
+};
 
 /** Is `provider`, paid in `contract` (a TON jetton in any spelling; null = native TON), a contract call signed here? */
 export function tonCallSigned(provider: string, contract: string | null): boolean {
