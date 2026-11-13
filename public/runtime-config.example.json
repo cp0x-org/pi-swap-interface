@@ -1,0 +1,108 @@
+{
+  "demo": false,
+  "providers": {
+    "uniswap": true,
+    "curve": true,
+    "balancer": true,
+    "wrap": true,
+    "usdt0": true,
+    "cctp": true,
+    "thorchain": true,
+    "chainflip": true,
+    "near_intents": true,
+    "lifi": true,
+    "relay": true,
+    "symbiosis": true,
+    "jupiter": true,
+    "omniston": true,
+    "fynd": true
+  },
+  "evmRpc": {
+    "1": ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org"],
+    "10": ["https://optimism-rpc.publicnode.com", "https://mainnet.optimism.io", "https://optimism.drpc.org"],
+    "14": ["https://flare-api.flare.network/ext/C/rpc", "https://flare.rpc.thirdweb.com"],
+    "56": ["https://bsc-rpc.publicnode.com", "https://bsc-dataseed.bnbchain.org", "https://bsc.drpc.org"],
+    "100": ["https://gnosis-rpc.publicnode.com", "https://rpc.gnosischain.com"],
+    "130": ["https://unichain-rpc.publicnode.com", "https://mainnet.unichain.org"],
+    "137": ["https://polygon-bor-rpc.publicnode.com", "https://polygon.drpc.org"],
+    "143": ["https://rpc.monad.xyz", "https://monad-mainnet.drpc.org"],
+    "146": ["https://rpc.soniclabs.com", "https://sonic-rpc.publicnode.com"],
+    "196": ["https://rpc.xlayer.tech", "https://xlayerrpc.okx.com"],
+    "324": ["https://mainnet.era.zksync.io", "https://zksync.drpc.org"],
+    "480": [
+      "https://worldchain-mainnet.g.alchemy.com/public",
+      "https://worldchain.drpc.org",
+      "https://480.rpc.thirdweb.com"
+    ],
+    "999": ["https://rpc.hyperliquid.xyz/evm", "https://hyperliquid.drpc.org"],
+    "1329": ["https://evm-rpc.sei-apis.com", "https://sei-evm-rpc.publicnode.com"],
+    "2818": ["https://rpc.morphl2.io", "https://rpc-quicknode.morphl2.io"],
+    "4326": ["https://mainnet.megaeth.com/rpc", "https://megaeth.drpc.org"],
+    "4663": ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood.drpc.org"],
+    "5000": ["https://rpc.mantle.xyz", "https://mantle-rpc.publicnode.com"],
+    "5042": ["https://rpc.mainnet.arc.io", "https://arc-rpc.publicnode.com"],
+    "8453": ["https://base-rpc.publicnode.com", "https://mainnet.base.org", "https://base.drpc.org"],
+    "9745": ["https://rpc.plasma.to", "https://plasma.gateway.tenderly.co"],
+    "42161": ["https://arbitrum-one-rpc.publicnode.com", "https://arb1.arbitrum.io/rpc", "https://arbitrum.drpc.org"],
+    "42220": ["https://forno.celo.org", "https://celo.drpc.org"],
+    "43114": [
+      "https://avalanche-c-chain-rpc.publicnode.com",
+      "https://api.avax.network/ext/bc/C/rpc",
+      "https://avalanche.drpc.org"
+    ],
+    "57073": ["https://rpc-gel.inkonchain.com", "https://ink-rpc.publicnode.com"],
+    "59144": ["https://rpc.linea.build", "https://linea-rpc.publicnode.com"],
+    "80094": ["https://rpc.berachain.com", "https://berachain-rpc.publicnode.com"],
+    "98866": ["https://rpc.plume.org", "https://98866.rpc.thirdweb.com"],
+    "99901": ["https://rpc.elysium.kinetiq.xyz", "https://elysium-rpc.publicnode.com", "https://elysium.drpc.org"],
+    "534352": ["https://rpc.scroll.io", "https://scroll-rpc.publicnode.com"],
+    "747474": ["https://rpc.katana.network", "https://katana.drpc.org"]
+  },
+  "solanaRpc": ["https://solana-rpc.publicnode.com", "https://public.rpc.solanavibestation.com"],
+  "nearRpc": ["https://rpc.mainnet.fastnear.com"],
+  "tonApiUrl": "https://tonapi.io",
+  "tronApi": ["https://tron-rpc.publicnode.com", "https://api.trongrid.io"],
+  "api": {
+    "nearIntents": "https://1click.chaindefuser.com/v0",
+    "lifi": "https://li.quest/v1",
+    "cctp": "https://iris-api.circle.com",
+    "layerZeroScan": "https://scan.layerzero-api.com",
+    "chainflip": "https://chainflip-swap.chainflip.io",
+    "relay": "https://api.relay.link",
+    "jupiter": "https://api.jup.ag/swap/v2",
+    "symbiosis": "https://api.symbiosis.finance/crosschain",
+    "balancer": "https://api-v3.balancer.fi/",
+    "omnistonWs": "wss://omni-ws.ston.fi",
+    "thorNodes": ["https://gateway.liquify.com/chain/thorchain_api", "https://thorchain-thornode-lb-1.thorwallet.org"],
+    "thorConfirmNodes": []
+  },
+  "nearIntents": {
+    "suspendedChains": {}
+  },
+  "cctp": {
+    "mode": "auto"
+  },
+  "thorchain": {
+    "clientId": "cp0x-swap"
+  },
+  "omniston": {
+    "maxUsd": 1000,
+    "evmSource": true
+  },
+  "pacing": {
+    "symbiosisGapMs": 1100,
+    "jupiterGapMs": 2100
+  },
+  "preview": {
+    "enabled": true,
+    "roundsBurst": 5,
+    "roundRefillMs": 20000
+  },
+  "walletConnect": {
+    "projectId": ""
+  },
+  "prices": {
+    "defillama": "https://coins.llama.fi",
+    "coingecko": "https://api.coingecko.com/api/v3"
+  }
+}

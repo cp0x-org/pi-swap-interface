@@ -1,0 +1,243 @@
+/* The swap form (ui-port.md §2.1, §5.3-5.4): pay/receive cards with the flip between them, the address boxes,
+   the slippage row, the summary and the CTA bar. Numbers from apps/mobile/app/swap/index.tsx. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pair {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* the amount input draws no ring of its own: the pay card shows where the keyboard is */
+.card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.balance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.amountRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 13px;
+  min-width: 0;
+}
+
+.amountInput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.receiveAmount {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.footLine {
+  margin-top: 7px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* a value quoted for the previous slippage or address while its venue re-quotes (D32): it stays, dimmed */
+.updatable,
+.updating {
+  transition: opacity 0.2s ease;
+}
+
+.updating {
+  opacity: 0.45;
+}
+
+/* the flip button cuts into both cards: 38 px, radius 14, a 3 px ring in the page colour (index.tsx L288-315) */
+.flip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  padding: 0;
+  border: 3px solid var(--bg);
+  border-radius: var(--r-control);
+  background: var(--surface3);
+  color: var(--accent);
+  transition:
+    background-color 0.12s ease,
+    transform 0.2s ease;
+}
+
+/* 44 × 44 hit area around the 38 px button */
+.flip::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.flip:active:not(:disabled) {
+  background: var(--surface3-alt);
+}
+
+@media (hover: hover) {
+  .flip:hover:not(:disabled) {
+    background: var(--surface3-alt);
+  }
+}
+
+.flip:disabled {
+  opacity: 0.6;
+}
+
+/* recipient / refund boxes (index.tsx L351-426) */
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.boxHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.boxText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.clear {
+  flex: none;
+}
+
+/* slippage row */
+.slippage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.slippageButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-chip);
+  background: var(--surface1);
+  color: var(--ink2);
+  box-shadow: var(--sh-button);
+  font-size: var(--t-small-size);
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  .slippageButton:hover {
+    background: var(--surface3);
+  }
+}
+
+.slippageButton:active {
+  background: var(--surface3);
+}
+
+.slippageButton::after {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset {
+  flex: 1 1 0;
+  min-width: 64px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+  color: var(--ink);
+  font-size: var(--t-small-size);
+  font-weight: 600;
+}
+
+.preset[aria-pressed="true"] {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+@media (hover: hover) {
+  .preset:hover:not([aria-pressed="true"]) {
+    background: var(--surface3);
+  }
+}
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* CTA: at the end of the form column on ≥ 640; sticky at the bottom of the viewport on phones (ui-port §5.1) */
+.cta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 639px) {
+  .cta {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 calc(-1 * var(--sp-page));
+    padding: 8px var(--sp-page) calc(8px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 72%, transparent);
+  }
+}

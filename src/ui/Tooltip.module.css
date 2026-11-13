@@ -1,0 +1,42 @@
+/* A simple hover/focus tooltip in the menu look (ChainPicker menu: bg menu, radius, --sh-menu). The tip lives on
+   <body> (Tooltip.tsx), fixed: it mounts at 0,0 and placeTooltip moves it before paint, over the sheets
+   (--z-tooltip) and 8 px clear of the viewport's edges — its max-width leaves that much on either side. It only
+   exists while shown, and a fixed box never widens the page. */
+.wrap {
+  display: inline-flex;
+}
+
+.tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-tooltip);
+  width: max-content;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 7px 10px;
+  border-radius: var(--r-chip);
+  background: var(--menu);
+  box-shadow: var(--sh-menu);
+  color: var(--ink2);
+  font-size: var(--t-meta-size);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-align: center;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  animation: tipIn 0.12s ease-out;
+}
+
+/* hover waits 0.2 s, so a pointer passing over a row shows nothing; focus shows the tip at once */
+.delayed {
+  animation-delay: 0.2s;
+  animation-fill-mode: backwards;
+}
+
+@keyframes tipIn {
+  from {
+    opacity: 0;
+  }
+}

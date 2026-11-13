@@ -1,0 +1,187 @@
+/* components/Cp0xSheetParts.tsx: header (icon 44, gap 12, title 18 px + meta sub, 34 px close), tiles, facts. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.headerIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.headerText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.headerTitle {
+  font-size: 18px;
+}
+
+.tiles {
+  display: flex;
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: var(--r-control);
+  background: var(--surface3);
+}
+
+.tileKey {
+  font-size: 10.5px;
+}
+
+.tileValueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tileValue {
+  font-size: 16px;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+}
+
+.fact {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.fact + .fact {
+  border-top: 1px solid var(--divider);
+}
+
+.factKey {
+  flex: none;
+}
+
+.factValue {
+  min-width: 0;
+  flex-shrink: 1;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* components/TxReviewCard.tsx: card padding-y 4; rows space-between, gap 16, padding 11 14 */
+.review {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  border-radius: var(--r-card);
+  background: var(--surface1);
+  box-shadow: var(--sh-card);
+}
+
+.reviewRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 14px;
+}
+
+/* compact (the review, the deposit panel): every row one line where it fits */
+.compact .reviewRow {
+  gap: 12px;
+  padding: 8px 14px;
+}
+
+.reviewKey {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+}
+
+/* the info mark beside a key: its tip explains the row (Tooltip shows it on hover and on focus) */
+.info {
+  position: relative;
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--dim);
+  cursor: help;
+}
+
+.info::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.info:focus-visible {
+  color: var(--ink2);
+}
+
+@media (hover: hover) {
+  .info:hover {
+    color: var(--ink2);
+  }
+}
+
+.reviewValue {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
+  align-items: flex-end;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* icon + value, then badge and note on the same line, right-aligned; badge and note drop under the value only when
+   the row has no room for them (the value itself wraps in place, never under its icon). No dot before the note: one
+   that wrapped would start its line with it — the gap and the dim colour set it apart. */
+.reviewValueLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.reviewMain {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.reviewBadge {
+  display: inline-flex;
+}
+
+.right {
+  text-align: right;
+  overflow-wrap: anywhere;
+  /* a value that waits for a new quote dims and comes back without a flash */
+  transition: color 0.2s ease;
+}

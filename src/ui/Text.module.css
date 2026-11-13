@@ -1,0 +1,101 @@
+/* The type scale (tokens.ts `type`, ui-port.md §1.3) over the --t-* variables. */
+.text {
+  margin: 0;
+  color: var(--ink);
+  line-height: var(--lh-default);
+}
+
+.balance {
+  font-size: var(--t-balance-size);
+  font-weight: var(--t-balance-weight);
+  letter-spacing: var(--t-balance-tracking);
+}
+.balanceCents {
+  font-size: var(--t-balance-cents-size);
+  font-weight: var(--t-balance-cents-weight);
+  letter-spacing: var(--t-balance-cents-tracking);
+}
+.hero {
+  font-size: var(--t-hero-size);
+  font-weight: var(--t-hero-weight);
+  letter-spacing: var(--t-hero-tracking);
+  line-height: var(--t-hero-line);
+}
+.title {
+  font-size: var(--t-title-size);
+  font-weight: var(--t-title-weight);
+  letter-spacing: var(--t-title-tracking);
+}
+.amount {
+  font-size: var(--t-amount-size);
+  font-weight: var(--t-amount-weight);
+  letter-spacing: var(--t-amount-tracking);
+}
+.listTitle {
+  font-size: var(--t-list-title-size);
+  font-weight: var(--t-list-title-weight);
+  letter-spacing: var(--t-list-title-tracking);
+}
+.body {
+  font-size: var(--t-body-size);
+  font-weight: var(--t-body-weight);
+  letter-spacing: var(--t-body-tracking);
+}
+.bodyStrong {
+  font-size: var(--t-body-strong-size);
+  font-weight: var(--t-body-strong-weight);
+  letter-spacing: var(--t-body-strong-tracking);
+}
+.small {
+  font-size: var(--t-small-size);
+  font-weight: var(--t-small-weight);
+  letter-spacing: var(--t-small-tracking);
+}
+.meta {
+  font-size: var(--t-meta-size);
+  font-weight: var(--t-meta-weight);
+  letter-spacing: var(--t-meta-tracking);
+}
+.caps {
+  font-size: var(--t-caps-size);
+  font-weight: var(--t-caps-weight);
+  letter-spacing: var(--t-caps-tracking);
+  text-transform: uppercase;
+}
+.tag {
+  font-size: var(--t-tag-size);
+  font-weight: var(--t-tag-weight);
+  letter-spacing: var(--t-tag-tracking);
+  text-transform: uppercase;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* numberOfLines={1} */
+.lines1 {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* numberOfLines={2} */
+.lines2 {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+  /* addresses and hashes are one long word: break them rather than widen the page */
+  overflow-wrap: anywhere;
+}

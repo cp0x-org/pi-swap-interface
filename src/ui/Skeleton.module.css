@@ -1,0 +1,49 @@
+/* components/Skeleton.tsx: a bar breathing .5 ↔ 1 over 900 ms (static under reduced motion). Mobile fills it
+   surface2, which is invisible on a surface1 card (#1d1d28 on #1c1c27); the web uses surface3 so it reads. */
+.skeleton {
+  display: block;
+  flex: none;
+  background: var(--surface3);
+  animation: breathe 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+/* ReviewSkeleton L22-39: radius 20 surface1, padding 6 16; rows 14 0 with a divider on top but the first. */
+.review {
+  border-radius: var(--r-card);
+  background: var(--surface1);
+  padding: 6px 16px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--divider);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}

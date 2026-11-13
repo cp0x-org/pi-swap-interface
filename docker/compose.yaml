@@ -1,0 +1,26 @@
+# cp0x Swap with Docker Compose, from the repository root:
+#
+#   mkdir -p config && cp public/runtime-config.example.json config/runtime-config.json   # optional
+#   docker compose -f docker/compose.yaml up -d --build
+#
+# Then open http://127.0.0.1:8080/. Swap history lives in the browser's storage for this exact origin, so keep the
+# public URL (scheme, host, port) stable. Behind a reverse proxy, serve it over HTTPS: NEAR Intents, Chainflip and
+# Jupiter need a secure context.
+services:
+  swap:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: cp0x/pi-swap-interface:local
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # runtime-config.json is optional. Without it the app uses its built-in public defaults.
+      - ../config:/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

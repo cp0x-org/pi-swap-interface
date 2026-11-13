@@ -1,0 +1,143 @@
+/* components/Button.tsx: 54 (main CTA) / 48 / 40, radius 14, padding 0 18, label 600, gap 9, icon 16. */
+.button {
+  --fill: var(--accent);
+  --fill-pressed: var(--accent-pressed);
+  --fg: var(--on-accent);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--fill);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: var(--lh-default);
+  white-space: nowrap;
+  transition:
+    background-color 0.12s ease,
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.h54 {
+  height: 54px;
+  font-size: 15.5px;
+}
+.h48 {
+  height: 48px;
+}
+.h40 {
+  height: 40px;
+}
+
+.primary {
+  box-shadow: var(--sh-button-accent);
+}
+.secondary {
+  --fill: var(--surface2);
+  --fill-pressed: var(--surface3-alt);
+  --fg: var(--ink);
+  box-shadow: var(--sh-button);
+}
+.ghost {
+  --fill: transparent;
+  --fill-pressed: var(--surface2);
+  --fg: var(--ink2);
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+/* LinkButton: an <a> in the same box (min-width 0 lets its label ellipsize in a grid cell) */
+.link {
+  min-width: 0;
+  text-decoration: none;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button:active:not(:disabled) {
+  background: var(--fill-pressed);
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    background: var(--fill-pressed);
+  }
+}
+
+.button:disabled {
+  opacity: 0.45;
+}
+
+.button.loading {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+/* IconButton (Button.tsx L66-101): 36 circle, surface2, icon 18 ink2, hit area +6 */
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface2);
+  color: var(--ink2);
+  box-shadow: var(--sh-button);
+  transition: background-color 0.12s ease;
+}
+
+.iconButton::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+}
+
+.iconButton:active:not(:disabled) {
+  background: var(--surface3-alt);
+}
+
+@media (hover: hover) {
+  .iconButton:hover:not(:disabled) {
+    background: var(--surface3-alt);
+  }
+}
+
+.iconButton:disabled {
+  opacity: 0.45;
+}
+
+/* the sheet header's close: surface3, no shadow (Cp0xSheetParts.tsx) */
+.flat {
+  background: var(--surface3);
+  box-shadow: none;
+}
+
+.flat::after {
+  inset: -8px;
+}
+
+@media (hover: hover) {
+  .flat:hover:not(:disabled) {
+    background: var(--menu-hover);
+  }
+}
+
+.flat:active:not(:disabled) {
+  background: var(--menu-hover);
+}

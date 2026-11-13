@@ -1,0 +1,7 @@
+dist
+dist-*
+test-results
+playwright-report
+node_modules
+*.local
+public/runtime-config.json

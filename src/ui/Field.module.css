@@ -1,0 +1,126 @@
+/* components/Field.tsx: surface1, radius 14, padding 13 14, 500 15 px, min-height 48, no border (fill only).
+   The address frame (swap/index.tsx L351-426): h52, padding-left 14 / right 6, 1.5 px tone border, 500 14 px. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.frame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+  transition: border-color 0.12s ease;
+}
+
+/* one ring, on the frame, in accent (accent-border was 1.6:1 against surface1, under the 3:1 a focus ring needs) */
+.frame:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.address {
+  min-height: 52px;
+}
+
+.withTrailing {
+  padding-right: 6px;
+}
+
+.valid {
+  border-color: var(--accent-border);
+}
+
+.invalid {
+  border-color: var(--red);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 11.5px 0; /* 13 px of the RN field minus the 1.5 px frame */
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* beats the global :focus-visible ring (same element), which drew a square box inside the rounded frame */
+.input:focus-visible {
+  outline: none;
+}
+
+.address .input {
+  font-size: 14px;
+}
+
+.input:disabled {
+  color: var(--muted);
+}
+
+.leading,
+.trailing {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+/* the pay amount (swap/index.tsx L215-285): right-aligned 600 25 px, tracking -0.8, padding 4 0 */
+.amount {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.amount:focus-visible {
+  outline: none;
+}
+
+.amount::placeholder {
+  color: var(--faint);
+}
+
+.amountInvalid {
+  color: var(--red);
+}
+
+/* the receive amount: one line, shrinks with its length (ui-port.md §5.3) */
+.amountText {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.28;
+  padding: 4px 0;
+}
+
+/* the empty receive value is text, not a placeholder: --faint (2:1) is for placeholders only */
+.amountEmpty {
+  color: var(--muted);
+}

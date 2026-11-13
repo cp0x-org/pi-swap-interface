@@ -1,0 +1,163 @@
+/* Token picker (ui-port.md §2.3, §5.7): search on top, a 72 px network rail on the left, the token list on the
+   right (virtualized when long). Desktop dialog 480 × min(680px, 90dvh); phone full-height bottom sheet. */
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px var(--sp-page) 12px;
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-top: 1px solid var(--divider);
+}
+
+.rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 72px;
+  padding: 12px 0 40px;
+  overflow-y: auto;
+  border-right: 1px solid var(--divider);
+  background: var(--bg-outer);
+  scrollbar-width: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.railItem {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+}
+
+.railItem[aria-pressed="true"] {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.railItem:active {
+  background: var(--surface1);
+}
+
+@media (hover: hover) {
+  .railItem:hover:not([aria-pressed="true"]) {
+    background: var(--surface1);
+  }
+}
+
+.all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface3);
+}
+
+.heldDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 6px;
+}
+
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 6px 40px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.virtual {
+  position: relative;
+  width: 100%;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* token row: gap 10, padding 9×10, radius 14, surface2 when selected or pressed */
+.token {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 52px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.token[aria-current="true"],
+.token:active {
+  background: var(--surface2);
+}
+
+@media (hover: hover) {
+  .token:hover {
+    background: var(--surface2);
+  }
+}
+
+.tokenText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.held {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.empty {
+  padding: 10px;
+}

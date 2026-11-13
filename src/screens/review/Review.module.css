@@ -1,0 +1,115 @@
+/* Review, deposit and error phases (ui-port.md §2.6, §5.8-5.9). Spaced to fit without scrolling (D34): the review
+   with Confirm at 1280×800 and 390×844. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* the headline amount, 27 px, one line, centred (the networks are the header's sub line) */
+.headline {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 27px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.otherBox {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  border-radius: var(--r-control);
+  background: var(--amber-bg);
+}
+
+/* a Fynd route's licence notice (the Fynd License §3.4) */
+.licenseBox {
+  padding: 12px 14px;
+  border-radius: var(--r-control);
+  background: var(--surface2);
+}
+
+.licenseLink {
+  color: var(--ink2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fine {
+  line-height: 17px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* scrolled into view while the wallet is asked (ReviewBody): with the sheet body's bottom padding, so the last
+     button never sits flush on the sheet's edge or under a phone's home indicator */
+  scroll-margin-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+/* error phase: 66 px red disc with a cross, "Not swapped", the reason */
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 8px;
+  text-align: center;
+}
+
+.errorDisc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: var(--red-bg);
+}
+
+.errorTitle {
+  margin-top: 20px;
+  font-size: 22px;
+}
+
+.errorText {
+  margin-top: 9px;
+  line-height: 19px;
+}
+
+/* deposit panel (§5.9) */
+.qrWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px 12px 14px;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+}
+
+.addressText {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.warning {
+  line-height: 17px;
+}
+
+.expired {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

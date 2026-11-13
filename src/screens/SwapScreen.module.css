@@ -1,0 +1,83 @@
+/* Layout "version B" (D23, ui-port.md §5.1): phone < 640 one full-width column, compact routes, sticky CTA;
+   640–1023 one column ≤ 560 px with the full route list under the form; ≥ 1024 the 400 px form centred, routes to its right. */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px var(--sp-page) 32px;
+}
+
+.formCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.routesCol {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .layout {
+    padding-bottom: 0;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .layout {
+    max-width: 560px;
+  }
+}
+
+/* The form sits on the page's centre line and the routes take the right-hand side, so the widget stays centred
+   whether the list shows routes, a hint or nothing yet. When the right side would drop under 400 px the empty
+   left side gives way first and the form drifts left of centre. */
+@media (min-width: 1024px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px minmax(400px, 1fr);
+    gap: 24px;
+    align-items: start;
+    max-width: 1440px;
+    padding: 16px 32px 48px;
+  }
+
+  .formCol,
+  .routesCol {
+    grid-row: 1;
+  }
+
+  .formCol {
+    grid-column: 2;
+  }
+
+  .routesCol {
+    grid-column: 3;
+    max-width: 480px;
+    position: sticky;
+    top: 80px;
+    max-height: calc(100dvh - 96px);
+    overflow: auto;
+    padding: 0 4px 8px;
+    margin: 0 -4px;
+  }
+}
+
+/* Wide desktops: the form and the routes 10% larger, together. Every size in the screen modules is px, so zoom is the
+   one place that scales them as a block; sheets portal to <body> and keep their size. From 1440 px the zoomed grid
+   still has its 400 px right side, so the form stays on the centre line. Zoom scales the sticky list's offsets too,
+   viewport units included, so they are divided back to end where they did. */
+@media (min-width: 1440px) {
+  .layout {
+    zoom: 1.1;
+  }
+
+  .routesCol {
+    top: calc(80px / 1.1);
+    max-height: calc((100dvh - 96px) / 1.1);
+  }
+}

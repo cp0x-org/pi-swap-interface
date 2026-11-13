@@ -1,0 +1,400 @@
+/* AppShell (ui-port.md §5.1): 64 px header, the main area, a one-line footer. Dark only, no borders. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 64px;
+  padding: 0 var(--sp-page);
+  background: linear-gradient(to bottom, var(--bg) 70%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .header {
+    padding: 0 32px;
+  }
+}
+
+.brand {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  user-select: none;
+}
+
+/* The cp0x logo (public/logos/cp0x*.png). The image ends at the "p"'s descender, 22% of its height below the
+   letters' baseline: moving it down by that much puts its baseline on "Swap"'s (the row aligns baselines, and an
+   image's is its bottom edge). */
+.logo {
+  display: block;
+  width: auto;
+  height: 22px;
+  position: relative;
+  top: 4.9px;
+}
+
+.product {
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  line-height: 1;
+}
+
+.spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tools {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.main {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+  padding: 24px var(--sp-page) calc(24px + env(safe-area-inset-bottom));
+  color: var(--dim);
+  text-align: center;
+}
+
+.footer a,
+.footerButton {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--faint);
+  text-underline-offset: 3px;
+}
+
+/* footer links: a 44 px tall hit area without changing the line (phones reach Settings here too) */
+.footer a::after,
+.footerButton::after {
+  content: "";
+  position: absolute;
+  inset: -13px -6px;
+}
+
+.sep {
+  color: var(--faint);
+}
+
+/* the header's wallets (WalletsDropdown.tsx, D33): one 40 px button — the wallets' icons stacked, each ringed in the
+   button's fill so the overlap reads, the address or "N wallets", a chevron — over a dropdown in the menu look of
+   ui-port §2.4 (bg menu, radius 14, --sh-menu; rows gap 10, padding 0 10) under it at ≥ 640, right-aligned to it, and
+   in the app's bottom sheet below. */
+.wallets {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px 0 9px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface2);
+  color: var(--ink);
+  box-shadow: var(--sh-button);
+}
+
+/* 44 px tall hit areas for the 40 px header controls (the header is 64 px) */
+.pill::after,
+.activity::after {
+  content: "";
+  position: absolute;
+  inset: -4px -2px;
+}
+
+@media (hover: hover) {
+  .pill:hover {
+    background: var(--surface3-alt);
+  }
+  .pill:hover .stackIcon {
+    box-shadow: 0 0 0 2px var(--surface3-alt);
+  }
+}
+
+.pill:active,
+.pill[aria-expanded="true"] {
+  background: var(--surface3-alt);
+}
+
+.pill:active .stackIcon,
+.pill[aria-expanded="true"] .stackIcon {
+  box-shadow: 0 0 0 2px var(--surface3-alt);
+}
+
+.connIcon {
+  flex: none;
+  border-radius: 6px;
+}
+
+.stack {
+  display: inline-flex;
+  flex: none;
+}
+
+.stackIcon {
+  display: inline-flex;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface2);
+}
+
+/* a wallet's own icon is a rounded square (connIcon), a network logo a disc */
+.stackSquare {
+  border-radius: 6px;
+}
+
+.stackIcon + .stackIcon {
+  margin-left: -7px;
+}
+
+.pillText {
+  max-width: 96px;
+  overflow: hidden;
+  font-size: var(--t-small-size);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pillChevron {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.pill[aria-expanded="true"] .pillChevron {
+  transform: rotate(180deg);
+}
+
+.walletsPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(340px, calc(100vw - 2 * var(--sp-page)));
+  /* it hangs 58 px down from the sticky header, so the page's scroll never brings its foot into view: the room under
+     it less 8 px, the rows scrolling inside (a landscape phone, 360 px tall, fits about three) */
+  max-height: calc(100dvh - 66px);
+  padding: 6px;
+  border-radius: var(--r-control);
+  background: var(--menu);
+  box-shadow: var(--sh-menu);
+  animation: popoverIn 0.12s ease-out;
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.walletsTitle {
+  padding: 8px 10px 2px;
+}
+
+/* the phone sheet: its header, the rows flush with it, the button */
+.walletsSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.walletRows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* NetworkPicker's options: the title and "Connect another wallet" stay put, the rows scroll */
+.walletsPopover .walletRows {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 4px 0 10px;
+  border-radius: 10px;
+}
+
+.walletsSheet .walletRow {
+  padding: 0;
+}
+
+.walletIcon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.walletIcon .connIcon {
+  border-radius: 9px;
+}
+
+/* the network in the wallet icon's corner (TokenIcon's badge), ringed in the menu's fill — the sheet's on phones */
+.walletBadge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: inline-flex;
+  border: 2px solid var(--menu);
+  border-radius: 50%;
+}
+
+.walletsSheet .walletBadge {
+  border-color: var(--sheet-bg);
+}
+
+.walletText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.walletNetwork {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* activity button: 40 px circle with the TxDock ring (§2.10 scaled 56 → 40) and a count badge */
+.activity {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--ink2);
+  box-shadow: var(--sh-button);
+}
+
+@media (hover: hover) {
+  .activity:hover {
+    background: var(--surface3-alt);
+  }
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.ringSpin {
+  transform-origin: 50% 50%;
+  animation: spin 1.1s linear infinite;
+}
+
+.ringPulse {
+  animation: pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ringSpin,
+  .ringPulse {
+    animation: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .gear {
+    display: none;
+  }
+  /* the wallets open a bottom sheet here, not a dropdown: no chevron, and the old combined pill's room */
+  .pill {
+    gap: 6px;
+    padding: 0 10px 0 7px;
+  }
+  .pillChevron {
+    display: none;
+  }
+  /* 19 px high: the width the old text wordmark took (52 px), so the phone header keeps its room */
+  .logo {
+    height: 19px;
+    top: 4.2px;
+  }
+}
+
+/* below 375 px (320-374): the brand drops its product word and the gaps tighten, so the header never scrolls sideways */
+@media (max-width: 374px) {
+  .header {
+    gap: 6px;
+    padding: 0 16px;
+  }
+  .product {
+    display: none;
+  }
+  .tools {
+    gap: 6px;
+  }
+}

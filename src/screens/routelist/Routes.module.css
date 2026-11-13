@@ -1,0 +1,276 @@
+/* Route list (ui-port.md §2.2, §5.5): header + status line, a card of rows (route | pending | refused), the
+   sectioned "Didn't quote" group, the quiet "Not for this pair" group, the preview banner, and the phone's compact
+   form (best route + "N more"). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* preview prices (D7): one quiet line above the list, in the accent tint, no border */
+/* the refresh button while the tab's preview budget is spent: seconds left, then the disabled button */
+.wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* the status line, and how many venues serve the pair beside it (under it when there is no room). The line is one
+   line, cut with an ellipsis, on a fixed basis: whether the coverage wraps depends on the panel's width, never on
+   the status text, so "Asking …" → "2 routes · updated just now" doesn't move the list (D32). */
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.status {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.coverage {
+  flex: none;
+}
+
+.hint {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+/* SwapRouteRow: gap 12, padding 12×14, radius 14; selected surface2 + 1 px accentBorder; pressed surface3 */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  user-select: none;
+}
+
+button.row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+button.row[aria-checked="true"] {
+  border-color: var(--accent-border);
+  background: var(--surface2);
+}
+
+button.row:active {
+  background: var(--surface3);
+}
+
+@media (hover: hover) {
+  button.row:hover:not([aria-checked="true"]) {
+    background: var(--surface2);
+  }
+}
+
+.middle {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* tags wrap under the name rather than truncating it on a phone */
+.line1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.right {
+  display: flex;
+  flex: none;
+  max-width: 50%;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  text-align: right;
+}
+
+/* a route quoted for the previous slippage or address, its venue asked again (D32): in place, numbers dimmed */
+.right,
+.detail {
+  transition: opacity 0.2s ease;
+}
+
+.updating .right,
+.updating .detail {
+  opacity: 0.45;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+
+@media (hover: hover) {
+  .group:hover {
+    background: var(--surface2);
+  }
+}
+
+.chevron {
+  transition: transform 0.15s ease;
+}
+
+.group[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+/* "Didn't quote" sections: a caps head (the "Routes" header's type), then its rows */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 2px;
+}
+
+/* A refused row is a native disclosure: the summary is the row; open, the chevron turns. */
+.refused > summary,
+.rawSummary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.refused > summary::-webkit-details-marker,
+.rawSummary::-webkit-details-marker {
+  display: none;
+}
+
+@media (hover: hover) {
+  .refused > summary:hover {
+    background: var(--surface2);
+  }
+}
+
+.refused[open] > summary > .chevron,
+.raw[open] > .rawSummary > .chevron {
+  transform: rotate(180deg);
+}
+
+/* 58 = row padding 14 + logo 32 + gap 12: the sentence lines up under the reason */
+.refusedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 14px 10px 58px;
+}
+
+.rawSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 32px;
+  border-radius: var(--r-tag);
+}
+
+.rawLine {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rawText {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+/* "Not for this pair": quieter and tighter than a route */
+.uncovered {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 639px) {
+  /* touch targets; the sentence takes the logo's column back */
+  .group,
+  .rawSummary {
+    min-height: 44px;
+  }
+
+  .refusedBody {
+    padding-left: 14px;
+  }
+}
+
+.more {
+  margin-top: 2px;
+}
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* the sheet's header, then how many venues serve the pair as one more line of it */
+.sheetHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}

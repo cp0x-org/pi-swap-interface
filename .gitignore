@@ -1,0 +1,10 @@
+node_modules
+/dist
+/dist-*
+*.local
+.vercel
+test-results
+playwright-report
+public/runtime-config.json
+.DS_Store
+.env*

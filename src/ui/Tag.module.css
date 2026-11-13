@@ -1,0 +1,35 @@
+/* SwapRouteRow Tag: radius 6, padding 2×6, the `tag` variant. */
+.tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--r-tag);
+  font-size: var(--t-tag-size);
+  font-weight: var(--t-tag-weight);
+  letter-spacing: var(--t-tag-tracking);
+  line-height: var(--lh-default);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.accent {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+.green {
+  color: var(--green);
+  background: var(--green-bg);
+}
+.muted {
+  color: var(--muted);
+  background: var(--surface3);
+}
+.amber {
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+.red {
+  color: var(--red);
+  background: var(--red-bg);
+}

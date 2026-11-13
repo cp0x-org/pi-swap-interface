@@ -1,0 +1,109 @@
+/* Small accent chips of the swap form: MAX (radius 6, padding 3×7, `tag` accent) and Paste (h36, px 12,
+   radius 10, `meta` 600 accent); both accentBg, pressed accentBorder (swap/index.tsx L224-245, L398-420). */
+.chip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: var(--accent-bg);
+  color: var(--accent);
+  white-space: nowrap;
+  transition:
+    background-color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.sm {
+  padding: 3px 7px;
+  border-radius: var(--r-tag);
+  font-size: var(--t-tag-size);
+  font-weight: var(--t-tag-weight);
+  letter-spacing: var(--t-tag-tracking);
+  line-height: var(--lh-default);
+  text-transform: uppercase;
+}
+
+.md {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--r-chip);
+  font-size: var(--t-meta-size);
+  font-weight: 600;
+}
+
+.chip:active:not(:disabled) {
+  background: var(--accent-border);
+}
+
+@media (hover: hover) {
+  .chip:hover:not(:disabled) {
+    background: var(--accent-border);
+  }
+}
+
+.chip:disabled {
+  opacity: 0.5;
+}
+
+/* TokenButton (swap/index.tsx L50-90): h44, padding 7 / 12, radius 14, surface3Alt, gap 8 */
+.token {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  height: 44px;
+  padding: 0 12px 0 7px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--surface3-alt);
+  color: var(--ink);
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.token:active:not(:disabled) {
+  background: var(--menu-hover);
+}
+
+@media (hover: hover) {
+  .token:hover:not(:disabled) {
+    background: var(--menu-hover);
+  }
+}
+
+.token:disabled {
+  cursor: default;
+}
+
+.tokenText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tokenChain {
+  font-size: 10.5px;
+}
+
+.empty {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface3);
+}
+
+.chevron {
+  flex: none;
+  color: var(--muted);
+}

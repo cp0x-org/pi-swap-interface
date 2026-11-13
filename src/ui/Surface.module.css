@@ -1,0 +1,43 @@
+/* components/Card.tsx: surface1, radius 20, the card shadow, no border. */
+.card {
+  border-radius: var(--r-card);
+  background: var(--surface1);
+  box-shadow: var(--sh-card);
+}
+
+/* components/Glass.tsx fallback branch: blur 30 + cyan-tinted fill. */
+.glass {
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-bg);
+  box-shadow: var(--sh-glass);
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--glass-tint);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.dark {
+  background: var(--glass-bg-dark);
+}
+
+.divider {
+  flex: none;
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--divider);
+}
+
+.vertical {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+}

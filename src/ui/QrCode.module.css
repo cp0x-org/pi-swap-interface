@@ -1,0 +1,28 @@
+/* DepositPanel QR (ui-port.md §5.9): dark modules on a white tile, 12 px quiet zone, radius 14. */
+.tile {
+  display: inline-flex;
+  flex: none;
+  padding: 12px;
+  border-radius: var(--r-control);
+  background: var(--qr-light);
+  transition:
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.svg {
+  display: block;
+}
+
+.dark {
+  fill: var(--qr-dark);
+}
+
+/* expired: never scannable */
+.expired {
+  filter: blur(6px);
+  opacity: 0.4;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

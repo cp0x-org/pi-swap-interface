@@ -1,0 +1,153 @@
+/* <Sheet> (ui-port.md §5.2): ≥ 640 a centred dialog (radius 20) or a right drawer; < 640 a bottom sheet with top
+   corners 34, a 36×5 grabber 8 px from the top, drag down to close. Fill --sheet-bg, shadow --sh-sheet. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: var(--backdrop);
+}
+
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-sheet);
+  display: flex;
+  flex-direction: column;
+  width: min(var(--sheet-width, 440px), calc(100vw - 32px));
+  max-height: min(720px, 90dvh);
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--sheet-bg);
+  box-shadow: var(--sh-sheet);
+  transform: translate(-50%, -50%);
+}
+
+.drawer {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(var(--sheet-width, 380px), 100vw);
+  max-height: none;
+  border-radius: var(--r-card) 0 0 var(--r-card);
+  transform: none;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+}
+
+.flush {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* the token sheet needs a definite height for its virtual list */
+.dialogFull {
+  height: min(680px, 90dvh);
+}
+
+.dialog[data-state="open"] {
+  animation: dialogIn 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.dialog[data-state="closed"] {
+  animation: dialogOut 0.14s ease-in;
+}
+.drawer[data-state="open"] {
+  animation: drawerIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.drawer[data-state="closed"] {
+  animation: drawerOut 0.18s ease-in;
+}
+.overlay[data-state="open"] {
+  animation: fadeIn 0.2s ease-out;
+}
+.overlay[data-state="closed"] {
+  animation: fadeOut 0.14s ease-in;
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+}
+@keyframes dialogOut {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -49%) scale(0.98);
+  }
+}
+@keyframes drawerIn {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes drawerOut {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* phone bottom sheet (vaul positions and animates the transform) */
+.bottom {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  background: var(--sheet-bg);
+  box-shadow: var(--sh-sheet);
+  outline: none;
+}
+
+.full {
+  height: calc(100dvh - 24px);
+}
+.tall {
+  max-height: 92dvh;
+}
+.half {
+  max-height: 70dvh;
+}
+
+.grabber {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: var(--r-pill);
+  background: var(--surface3);
+}
+
+.bottom .body {
+  padding: 28px var(--sp-page) calc(20px + env(safe-area-inset-bottom));
+}
+
+.bottom .flush {
+  padding-top: 22px;
+  padding-bottom: env(safe-area-inset-bottom);
+}

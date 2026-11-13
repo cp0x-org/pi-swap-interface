@@ -1,0 +1,42 @@
+/* RN Switch (swap/index.tsx L360-370): track 44×26 pill, on accent / off surface3, knob 22 ink. */
+.track {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--surface3);
+  transition: background-color 0.18s ease;
+}
+
+/* 44 × 44 hit area around the 44 × 26 track */
+.track::after {
+  content: "";
+  position: absolute;
+  inset: -9px 0;
+}
+
+.track[aria-checked="true"] {
+  background: var(--accent);
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: var(--sh-knob);
+  transition: transform 0.18s ease;
+}
+
+.track[aria-checked="true"] .knob {
+  transform: translateX(18px);
+}
+
+.track:disabled {
+  opacity: 0.45;
+}

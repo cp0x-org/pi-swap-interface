@@ -1,0 +1,117 @@
+/* Design tokens of the cp0x wallet (apps/mobile/theme/tokens.ts, ui-port.md §1.1), one CSS variable per token.
+   Dark only; no borders — surfaces separate by fill + shadow. The variable NAMES are a contract: every CSS Module
+   uses them, and tests/unit/ui/tokens.test.ts keeps them equal to src/theme/tokens.ts. */
+:root {
+  color-scheme: dark;
+
+  /* colors */
+  --bg: #16161f;
+  --bg-outer: #0c0c11;
+  --surface1: #1c1c27;
+  --surface2: #1d1d28;
+  --surface3: #22222d;
+  --surface3-alt: #24242f;
+  --menu: #20202b;
+  --menu-hover: #2a2a37;
+  --divider: #26262f;
+  --ink: #e8e8ef;
+  --ink2: #c9c9d6;
+  --muted: #8a8a9c;
+  --dim: #878797; /* web: AA for text (mobile #63636f is 2.85:1 on surface1) */
+  --faint: #4c4c5e;
+  --accent: #00d4ff;
+  --accent-pressed: #4ce2ff;
+  --accent-bg: #0d2a34;
+  --accent-border: #124554;
+  --on-accent: #06131a;
+  --glass-tint: #2dfffe;
+  --green: #3ddc97;
+  --green-bg: #182a22;
+  --red: #ff5c6f;
+  --amber: #e0a83c;
+  --backdrop: rgba(0, 0, 0, 0.55);
+  /* the web sheet fill (tokens.ts sheetBackground, the Android value) */
+  --sheet-bg: #16161f;
+  /* fills the mobile screens write inline */
+  --red-bg: rgba(255, 92, 111, 0.12); /* review error disc (review.tsx L192) */
+  --red-bg-step: rgba(255, 92, 111, 0.14); /* failed step dot (SwapSteps.tsx L22) */
+  --amber-bg: rgba(224, 168, 60, 0.1); /* "another address" box (review.tsx L312) */
+  /* Glass.tsx fallback branch */
+  --glass-bg: rgba(26, 34, 42, 0.45);
+  --glass-bg-dark: rgba(22, 22, 31, 0.82);
+  --sh-glass: 0 10px 30px rgba(0, 0, 0, 0.42), inset 0 0.5px 0 rgba(170, 255, 255, 0.4);
+  /* TxDock ring track */
+  --ring-track: rgba(232, 232, 239, 0.12);
+  /* QR modules need a light ground to scan (ui-port.md §5.9) */
+  --qr-dark: #06131a;
+  --qr-light: #ffffff;
+
+  /* radius */
+  --r-tag: 6px;
+  --r-chip: 10px;
+  --r-control: 14px;
+  --r-card: 20px;
+  --r-sheet: 34px;
+  --r-pill: 999px;
+
+  /* space */
+  --sp-page: 20px;
+  --sp-list: 12px;
+  --sp-row: 8px;
+  --sp-tab-bar-inset: 96px;
+
+  /* shadows ("levitation"; RN boxShadow is already CSS syntax) */
+  --sh-card: 0 18px 36px -16px rgba(0, 0, 0, 0.75), 0 4px 10px -4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --sh-button: 0 10px 22px -10px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sh-button-accent: 0 14px 26px -12px rgba(0, 0, 0, 0.85), 0 3px 8px -3px rgba(0, 0, 0, 0.45), inset 0 1.5px 0 rgba(255, 255, 255, 0.55), inset 0 -2px 0 rgba(0, 40, 52, 0.18);
+  --sh-sheet: 0 30px 60px -20px rgba(0, 0, 0, 0.85), 0 8px 20px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sh-menu: 0 18px 40px rgba(0, 0, 0, 0.55);
+  --sh-knob: 0 2px 4px rgba(0, 0, 0, 0.35); /* the native switch knob */
+
+  /* type: one family, four weights (fonts.css); RN letterSpacing pt = CSS px */
+  --font: "Cp0xGrotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lh-default: 1.28; /* Space Grotesk's natural ascent+descent; RN sets no line-height */
+
+  --t-balance-size: 37px;
+  --t-balance-weight: 600;
+  --t-balance-tracking: -1.4px;
+  --t-balance-cents-size: 22px;
+  --t-balance-cents-weight: 500;
+  --t-balance-cents-tracking: -0.6px;
+  --t-hero-size: 40px;
+  --t-hero-weight: 600;
+  --t-hero-tracking: -1.8px;
+  --t-hero-line: 41px;
+  --t-title-size: 20px;
+  --t-title-weight: 600;
+  --t-title-tracking: -0.5px;
+  --t-amount-size: 30px;
+  --t-amount-weight: 600;
+  --t-amount-tracking: -1px;
+  --t-list-title-size: 14px;
+  --t-list-title-weight: 600;
+  --t-list-title-tracking: 0px;
+  --t-body-size: 14px;
+  --t-body-weight: 400;
+  --t-body-tracking: 0px;
+  --t-body-strong-size: 14px;
+  --t-body-strong-weight: 500;
+  --t-body-strong-tracking: 0px;
+  --t-small-size: 13px;
+  --t-small-weight: 400;
+  --t-small-tracking: 0px;
+  --t-meta-size: 12px;
+  --t-meta-weight: 400;
+  --t-meta-tracking: 0px;
+  --t-caps-size: 11px;
+  --t-caps-weight: 600;
+  --t-caps-tracking: 0.8px;
+  --t-tag-size: 10px;
+  --t-tag-weight: 600;
+  --t-tag-tracking: 0.4px;
+
+  /* layers: a tooltip is drawn on <body>, so it sits over the sheets it is shown in (and under the toasts) */
+  --z-sheet: 50;
+  --z-tooltip: 60;
+  --z-toast: 70;
+}

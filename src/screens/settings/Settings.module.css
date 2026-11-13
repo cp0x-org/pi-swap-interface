@@ -1,0 +1,412 @@
+/* Settings sheet: connection mode (Custom RPCs and keys), venues on/off, API bases, WalletConnect id — stored in this browser only. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.venues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 4px 4px 14px;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+}
+
+.venue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.venueName {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.textareaLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--r-control);
+  outline: none;
+  background: var(--surface1);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.textarea::placeholder {
+  color: var(--faint);
+}
+
+.disclosure {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.chevron {
+  transition: transform 0.15s ease;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* the saved-settings notice on the swap screen and the review (SavedNotice.tsx) */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: var(--r-control);
+  background: var(--amber-bg);
+}
+
+.noticeLink {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink2);
+  font: inherit;
+  font-size: var(--t-meta-size);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Connection (D30): the mode picker is a native radio group (arrow keys move the choice), drawn as the slippage presets */
+.modes {
+  display: flex;
+  gap: 8px;
+}
+
+/* Connection's heading and its info button */
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* What the info button opens: the Standard status and what each mode sends where */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-chip);
+  background: var(--surface3);
+}
+
+.mode {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+  color: var(--ink);
+  font-size: var(--t-small-size);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mode:has(.modeInput:checked) {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.mode:has(.modeInput:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  .mode:hover:not(:has(.modeInput:checked)) {
+    background: var(--surface3);
+  }
+}
+
+/* the radio itself stays in the accessibility tree and takes focus; the label draws it */
+.modeInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.custom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.subhead {
+  margin: 6px 0 0;
+}
+
+.addRpc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addUrl {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.addUrl > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Custom's network picker (NetworkPicker.tsx): the trigger in the field look (48 px, surface1, 500 15 px) with the
+   network's logo; the list in the menu look of ui-port §2.4 (bg menu, radius 14, --sh-menu; rows gap 10, padding 0 12,
+   small 500, the active one menu-hover, the chosen one's check 12 accent in a 14 px slot; rows 44 px to touch) — a
+   popover under the trigger at ≥ 640, a bottom sheet below. */
+.picker {
+  position: relative;
+}
+
+.pickerTrigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.pickerTrigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  .pickerTrigger:hover {
+    background: var(--surface3);
+  }
+}
+
+.pickerValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pickerChevron {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.pickerTrigger[aria-expanded="true"] .pickerChevron {
+  transform: rotate(180deg);
+}
+
+/* over what follows the add row; scrolled into view inside the sheet body when it opens */
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  max-height: min(380px, 60dvh);
+  padding: 6px;
+  border-radius: var(--r-control);
+  background: var(--menu);
+  box-shadow: var(--sh-menu);
+  animation: popoverIn 0.12s ease-out;
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* the phone sheet (flush): its header and the search stay put, the list scrolls */
+.pickerSheet {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 0 var(--sp-page) 12px;
+}
+
+.pickerPanel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  scroll-margin: 22px; /* the popover scrolled into view whole (its 6 px padding), clear of the dialog's rounded edge */
+}
+
+.options {
+  position: relative; /* the options' offsetTop, for keeping the active one in view */
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: var(--t-small-size);
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.option[aria-selected="true"] {
+  background: var(--menu-hover);
+}
+
+.optionName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionCheck {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 14px;
+}
+
+.pickerEmpty {
+  padding: 10px 12px;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 4px 4px 12px;
+  border-radius: var(--r-control);
+  background: var(--surface1);
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.rowText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.keysElsewhere {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}

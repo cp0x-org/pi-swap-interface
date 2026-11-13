@@ -1,0 +1,31 @@
+/* Cp0xGrotesk = Space Grotesk (OFL-1.1, public/fonts/OFL.txt) with the cp0x logo zero. Mobile ships one family per
+   weight; the web has one family with four weights. Converted from apps/mobile/assets/fonts/*.ttf to WOFF2 with
+   fontTools (ui-port.md §1.2). Paths resolve against this stylesheet, so dist/ also works from a sub-path. */
+@font-face {
+  font-family: "Cp0xGrotesk";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Cp0xGrotesk-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cp0xGrotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Cp0xGrotesk-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cp0xGrotesk";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/Cp0xGrotesk-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Cp0xGrotesk";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/Cp0xGrotesk-Bold.woff2") format("woff2");
+}

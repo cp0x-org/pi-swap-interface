@@ -1,0 +1,76 @@
+/* components/SwapSteps.tsx: dot 26; rail 1.5 wide, min 14, green when done else surface3, opacity .6;
+   row gap 12; text column padding-top 3, padding-bottom 16 (not last), gap 2. */
+.steps {
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  gap: 12px;
+}
+
+.track {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.active {
+  background: var(--accent-bg);
+}
+.done {
+  background: var(--green-bg);
+}
+.failed {
+  background: var(--red-bg-step);
+}
+.todo {
+  border: 1.5px solid var(--surface3);
+}
+
+.rail {
+  flex: 1;
+  width: 1.5px;
+  min-height: 14px;
+  background: var(--surface3);
+  opacity: 0.6;
+}
+
+.railDone {
+  background: var(--green);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 3px;
+  padding-bottom: 16px;
+}
+
+.step:last-child .text {
+  padding-bottom: 0;
+}
+
+/* compact (the status view, D34): 10 px between steps, the rail at least 8 — the review's steps keep 16 / 14 */
+.compact .text {
+  padding-bottom: 10px;
+}
+
+.compact .rail {
+  min-height: 8px;
+}

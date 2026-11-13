@@ -1,0 +1,61 @@
+/* A minimal toast stack: bottom centre, above the phone's sticky CTA; menu look. */
+.region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .region {
+    bottom: 24px;
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--r-control);
+  background: var(--menu);
+  box-shadow: var(--sh-menu);
+  color: var(--ink);
+  font-size: var(--t-small-size);
+  font-weight: 500;
+  pointer-events: auto;
+  animation: toastIn 0.18s ease-out;
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.green {
+  background: var(--green);
+}
+.amber {
+  background: var(--amber);
+}
+.red {
+  background: var(--red);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
