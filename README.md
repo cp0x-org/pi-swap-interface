@@ -333,8 +333,9 @@ Example: your own Ethereum and Base nodes, Symbiosis on, WalletConnect on.
   most 0.5 TON attached for gas, exactly the reviewed amount to the venue's pinned contract, the excess back to you,
   no custom payload, enough TON forwarded for the contract to act on it, the instruction's own fee leaving at least
   your reviewed minimum, then the venue's own verifier (its SDK package) against your reviewed recipient, refund path
-  and minimum. Omniston's escrow is also read by the page itself (you as its owner, the reviewed network, token and
-  recipient, at least the reviewed minimum, one hash lock) and signed only once the page has read back, from this
+  and minimum. Omniston's escrow is also read by the page itself (you as its owner and as where a failed creation
+  refunds, enough TON for the escrow to be created, the reviewed network, token and recipient, at least the reviewed
+  minimum, one hash lock) and signed only once the page has read back, from this
   browser's storage, the secret whose hash locks it — the secret is handed to Omniston only after the delivery on the
   EVM network was checked on chain; until then (or if the resolver never delivers) the escrow refunds you after its
   timeout. Keep site storage for this page: it is the only copy of that secret. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the

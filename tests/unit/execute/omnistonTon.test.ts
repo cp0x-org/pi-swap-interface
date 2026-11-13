@@ -78,6 +78,8 @@ const EVIL_EVM = "0x000000000000000000000000000000000000dEaD";
 const BNB_USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 /** TON_CALLS.omniston.minForwardTon: the minter's notification in every recording. */
 const FORWARD = 300_000_000n;
+/** What the minter forwards to the escrow it deploys in every recording: the least the app's decode lets through. */
+const ESCROW_GAS = 120_000_000n;
 const KECCAK = "HASHING_FUNCTION_KECCAK256";
 
 const b64 = (c: Cell) => Buffer.from(c.toBoc()).toString("base64");
@@ -182,6 +184,20 @@ function escrowBoc(boc: string, over: Partial<Escrow> = {}, o: {inline?: boolean
   return b64(b.endCell());
 }
 
+/**
+ * The capture's auxiliary cell (the order's 3rd reference) with `over` applied: its zero address, the address a failed
+ * creation refunds to (the payer), its 3 trailing bits, its one cell; `tail` adds a bit after them, `ref` a 2nd cell.
+ */
+function auxCell(over: {zero?: Address; refund?: Address; bits?: number; cell?: Cell; tail?: boolean; ref?: boolean} = {}): Cell {
+  const a = readEscrow(CAPTURED).aux.beginParse();
+  const [zero, refund, bits, cell] = [a.loadAddress(), a.loadAddress(), a.loadUint(3), a.loadRef()];
+  const b = beginCell().storeAddress(over.zero ?? zero).storeAddress(over.refund ?? refund).storeUint(over.bits ?? bits, 3);
+  if (over.tail) b.storeBit(0);
+  b.storeRef(over.cell ?? cell);
+  if (over.ref) b.storeRef(commentCell("x"));
+  return b.endCell();
+}
+
 /** This browser's test secret, and the capture rebuilt with its hashlock: the body every case below starts from. */
 const SECRET = "5e".repeat(32);
 const LOCK = lockOf(SECRET);
@@ -225,6 +241,23 @@ describe("the escrow rewriter", () => {
   it("re-encodes the capture cell for cell", () => {
     expect(Cell.fromBase64(escrowBoc(CAPTURED)).hash().equals(Cell.fromBase64(CAPTURED).hash())).toBe(true);
     expect(readEscrow(CAPTURED).hashlock.toString("hex")).toBe(X.escrowRequest.secretHashHex);
+    expect(auxCell().equals(readEscrow(CAPTURED).aux)).toBe(true);
+  });
+
+  it("reads the auxiliary cell as the app does: a zero address, the payer (a failed creation's refund), 000, one cell", () => {
+    // Both live escrows (2026-10-10 on rev1, 2026-11-11 on rev2) carry the same auxiliary cell, the payer aside, and flags.
+    const old = readEscrow(Buffer.from(E.payloadHex, "hex").toString("base64"));
+    for (const e of [readEscrow(CAPTURED), old]) {
+      const a = e.aux.beginParse();
+      expect(a.loadAddress().toRawString()).toBe(`0:${"0".repeat(64)}`);
+      expect(a.loadAddress().toRawString()).toBe(Address.parse(E.owner).toRawString());
+      expect([a.loadUint(3), a.remainingBits, a.remainingRefs]).toEqual([0, 0, 1]);
+    }
+    expect(SELF).toBe(Address.parse(E.owner).toRawString());
+    expect(old.aux.refs[0]!.equals(readEscrow(CAPTURED).aux.refs[0]!)).toBe(true);
+    expect(old.flags.equals(readEscrow(CAPTURED).flags)).toBe(true);
+    // The flags: 75 in 64 bits, then 34 zero bits.
+    expect(beginCell().storeUint(75, 64).storeUint(0, 34).endCell().equals(readEscrow(CAPTURED).flags)).toBe(true);
   });
 });
 
@@ -309,15 +342,33 @@ describe("checkTonCall on the rev2 escrow: the app's own decode of the transfer 
     for (const [m, why] of cases) expect(check(m), String(why)).toMatch(why);
   });
 
-  it("refuses every field of the escrow order where the money goes: owner, network, token, recipient, the minimum, one lock", () => {
+  it("refuses every field of the escrow order where the money goes: owner, a failed creation's refund, the escrow's gas, network, token, recipient, the minimum, one lock", () => {
     const evm = (a: string) => Buffer.from(a.slice(2), "hex");
     const cases: [Partial<Escrow>, RegExp][] = [
       [{orderOp: 0xc0a5f0da}, /isn't an escrow order/],
       [{owner: Address.parseRaw(EVIL_TON)}, /escrow's owner \(where it refunds\) isn't you/],
       [{ownerDataOwner: Address.parseRaw(EVIL_TON)}, /refunds another wallet/],
-      // The escrow's own gas: some, and less than what the transfer forwards to the minter (0.12 of 0.3 TON recorded).
+      // The escrow's own gas: at least every recording's 0.12 TON (with less its creation fails, and the input takes the
+      // failed-creation refund), and less than what the transfer forwards to the minter (0.3 TON recorded).
       [{escrowForward: FORWARD}, /asks the minter to forward more TON than the transfer brings it/],
-      [{escrowForward: 0n}, /asks the minter to forward more TON/],
+      [{escrowForward: 0n}, /forwards the escrow too little TON to deploy it/],
+      [{escrowForward: 1n}, /forwards the escrow too little TON to deploy it/],
+      [{escrowForward: ESCROW_GAS - 1n}, /forwards the escrow too little TON to deploy it/],
+      // A failed creation's refund (the auxiliary cell's 2nd address) to anyone but the payer; the rest of that cell and
+      // the flags cell, whose meaning the package doesn't read, as every recording has them.
+      [{aux: auxCell({refund: Address.parseRaw(EVIL_TON)})}, /refunds a failed creation to another wallet than yours/],
+      [{aux: auxCell({refund: Address.parseRaw(JW)})}, /refunds a failed creation to another wallet/],
+      [{aux: auxCell({zero: Address.parseRaw(EVIL_TON)})}, /auxiliary cell isn't the one every build carries/],
+      [{aux: auxCell({bits: 4})}, /auxiliary cell isn't the one/],
+      [{aux: auxCell({cell: beginCell().storeUint(0, 2).storeAddress(Address.parseRaw(EVIL_TON)).endCell()})}, /auxiliary cell isn't the one/],
+      [{aux: auxCell({cell: commentCell("x")})}, /auxiliary cell isn't the one/],
+      [{aux: auxCell({tail: true})}, /auxiliary cell isn't the one/],
+      [{aux: auxCell({ref: true})}, /auxiliary cell isn't the one/],
+      // No refund address at all (addr_none where the payer goes).
+      [{aux: beginCell().storeAddress(readEscrow(BODY).aux.beginParse().loadAddress()).storeUint(0, 2).storeUint(0, 3).storeRef(readEscrow(BODY).aux.refs[0]!).endCell()}, /can't be read/],
+      [{flags: beginCell().storeUint(76, 64).storeUint(0, 34).endCell()}, /flags aren't the ones every build carries/],
+      [{flags: beginCell().storeUint(75, 64).storeUint(1, 34).endCell()}, /flags aren't the ones/],
+      [{flags: beginCell().storeUint(75, 64).storeUint(0, 34).storeRef(commentCell("x")).endCell()}, /flags aren't the ones/],
       [{flag1: true}, /layout its package reads/],
       [{flag2: true}, /layout its package reads/],
       [{configOp: 0xf2c6fa64}, /config can't be read/],
@@ -332,8 +383,10 @@ describe("checkTonCall on the rev2 escrow: the app's own decode of the transfer 
       [{resolverSends: OUTPUT - 1n}, /less than the reviewed minimum/],
     ];
     for (const [over, why] of cases) expect(check({bodyBoc: escrowBoc(BODY, over)}), String(why)).toMatch(why);
-    expect(readEscrow(BODY).escrowForward).toBe(120_000_000n);
+    expect(readEscrow(BODY).escrowForward).toBe(ESCROW_GAS);
+    expect(check({bodyBoc: escrowBoc(BODY, {escrowForward: ESCROW_GAS})})).toBeNull();
     expect(check({bodyBoc: escrowBoc(BODY, {escrowForward: FORWARD - 1n})})).toBeNull();
+    expect(check({bodyBoc: escrowBoc(BODY, {aux: auxCell()})})).toBeNull();
     expect(check({bodyBoc: escrowBoc(BODY, {resolverSends: OUTPUT})})).toBeNull();
   });
 
@@ -424,6 +477,24 @@ describe("the escrow's binding (omnistonEscrow.ts): the provider's build, this b
       reviewedOf({amountIn: AMOUNT + 1n}),
     ])
       expect(await bind({}, r)).toMatch(/isn't the one its provider checked/);
+  });
+
+  it("holds neither the auxiliary and flags cells (shape only) nor the escrow's gas (more than none): the app's own decode does", async () => {
+    // Bodies the provider's check passes and kept, each a field of the order only the app's decode holds. When the
+    // package binds them (hardening for its owner), `bind` refuses them too and this flips.
+    const cases: [Partial<Escrow>, RegExp][] = [
+      [{aux: auxCell({refund: Address.parseRaw(EVIL_TON)})}, /refunds a failed creation to another wallet/],
+      [{aux: auxCell({zero: Address.parseRaw(EVIL_TON)})}, /auxiliary cell isn't the one/],
+      [{flags: beginCell().storeUint(76, 64).storeUint(0, 34).endCell()}, /flags aren't the ones/],
+      [{escrowForward: 1n}, /too little TON to deploy it/],
+    ];
+    for (const [over, why] of cases) {
+      const boc = escrowBoc(BODY, over);
+      built(boc);
+      expect(await bind({bodyBoc: boc}), String(why)).toBeNull();
+      expect(checkTonCall(msgOf({bodyBoc: boc}), callOf(), SELF), String(why)).toMatch(why);
+      expect(await armCheck({boc}), String(why)).toMatch(why);
+    }
   });
 
   it("then the package's build verifier with a quote rebuilt from the review: what the resolver sends covers the reviewed minimum", async () => {
@@ -552,6 +623,11 @@ describe("checkTonRequest's jetton-call kind and the account's binding on the es
     expect(checkTonRequest(req({address: bounceable(EVIL_TON)}), exp, ctx())).toMatch(/your own jetton wallet/);
     const short = escrowBoc(BODY, {resolverSends: OUTPUT - 1n});
     expect(checkTonRequest(req({payload: short}), {...exp, bodyBoc: short}, ctx())).toMatch(/less than the reviewed minimum/);
+    // Armed so, an escrow refunding a failed creation elsewhere, or too poor to deploy, is still read and refused here.
+    const elsewhere = escrowBoc(BODY, {aux: auxCell({refund: Address.parseRaw(EVIL_TON)})});
+    expect(checkTonRequest(req({payload: elsewhere}), {...exp, bodyBoc: elsewhere}, ctx())).toMatch(/refunds a failed creation to another wallet/);
+    const poor = escrowBoc(BODY, {escrowForward: 1n});
+    expect(checkTonRequest(req({payload: poor}), {...exp, bodyBoc: poor}, ctx())).toMatch(/too little TON to deploy it/);
   });
 
   it("the account binds it again right before the wallet: a secret gone from storage by then is refused, nothing sent", async () => {
@@ -748,15 +824,20 @@ describe("executeSwap from a TON wallet through Omniston: the real engine and pr
     expect(api.disclosed).toEqual([]);
   });
 
-  it("refuses a tampered build before the wallet is asked: more gas, a non-bounceable target, a stranded escrow, a lost secret", async () => {
+  it("refuses a tampered build before the wallet is asked: more gas, a non-bounceable target, a stranded escrow, a failed creation refunded elsewhere, a lost secret", async () => {
     // `atPlan`: refused by the review hook itself (SwapReviewMismatch) — nothing was armed, the wallet never reachable.
+    const rewrite = (m: {payload: string}, over: Partial<Escrow>) => void (m.payload = hexOf(escrowBoc(Buffer.from(m.payload, "hex").toString("base64"), over)));
     const cases: [Parameters<typeof fakeOmniston>[0], RegExp, boolean, ((api: ReturnType<typeof fakeOmniston>) => void)?][] = [
       // 0.6 TON: inside the provider's 2 TON cap, above the app's 0.5 TON (the engine's tonGasCeiling here).
       [(m) => void (m.sendAmount = "600000000"), /more than the 500000000 gas ceiling/, false],
       // The payer's own jetton wallet, non-bounceable: the package's jetton-wallet check and the engine read the raw address.
       [(m) => void (m.targetAddress = Address.parseRaw(JW).toString({urlSafe: true, bounceable: false})), /bounceable/, true],
       // 1 nanoTON forwarded to the minter (the package asks only for more than 0): the escrow is never deployed.
-      [(m) => void (m.payload = hexOf(escrowBoc(Buffer.from(m.payload, "hex").toString("base64"), {forwardTon: 1n}))), /forwards too little TON/, true],
+      [(m) => rewrite(m, {forwardTon: 1n}), /forwards too little TON/, true],
+      // The minter told to forward the escrow 1 nanoTON (the package asks only for more than 0): its creation fails...
+      [(m) => rewrite(m, {escrowForward: 1n}), /forwards the escrow too little TON to deploy it/, true],
+      // ...and a failed creation refunds the auxiliary cell's 2nd address, which the package reads for shape only.
+      [(m) => rewrite(m, {aux: auxCell({refund: Address.parseRaw(EVIL_TON)})}), /refunds a failed creation to another wallet than yours/, true],
       // The secret gone from IndexedDB once the escrow was built (evicted, cleared): the escrow could never complete.
       [
         undefined,

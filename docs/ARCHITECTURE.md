@@ -1211,19 +1211,25 @@ trusting the engine's summary (which skips a custom payload and doesn't read the
     label names, no deadline checked — not a native coin, not Tron); the transfer may pay only `OMNISTON_TON_MINTER`,
     the rev2 minter EQDybO88… pinned in the main bundle (a test holds it equal to the package's
     `AUDITED_OMNISTON_SETTLEMENT_CONTRACTS["ton:-239"]`; rev1 never); it forwards at least 0.3 TON (`minForwardTon`,
-    every recording's: two live escrows, 2026-10-10 and 2026-11-11, and the dry build of 2026-11-13 — 0.4 TON
-    attached, under `TON_BODY_GAS`).
+    every recording's: two live escrows, 2026-10-10 and 2026-11-11, and the dry builds of 2026-11-13 and 2026-11-14 —
+    0.4 TON attached, under `TON_BODY_GAS`).
   - *The app's own decode* (checkTonCall, unchanged, then `omnistonInstruction`): the envelope and the TEP-74 transfer
     as in part A (one message, mainnet, the reviewed wallet, ≤ 5 min, no state init; to the payer's pinned-code jetton
     wallet, bounceable, ≤ 0.5 TON; op `0x0f8a7ea5`, the reviewed amount, the pinned minter, excess to the payer, a
     custom payload refused, forward between the floor and the TON attached, the order in a reference, nothing after
     it); then the order itself: op `0xc0a5f0d9`, the payer as owner (where it refunds) in the order and in its owner
-    data, the TON the minter forwards to the escrow some and less than what the transfer brings it (the instruction
-    reader is now told that amount; Symbiosis ignores it), its four cells; the config's one resolver, no Dutch auction,
-    a destination, one full fill; the execution locked by ONE keccak hash and naming the same resolver; the
-    destination the reviewed EVM network, token and recipient, the resolver bound to send at least the reviewed
-    minimum; every cell read to its end. The pins (escrow and execution code, authority key, timelocks, the deposit)
-    are the package's, below.
+    data, the TON the minter forwards to the escrow — at least 0.12 TON (`OMNISTON_ESCROW_GAS`, every recording's,
+    the quote's `estimatedGasConsumption`: the escrow's own deploy gas, with less its creation fails; the package asks
+    only for more than none) and less than what the transfer brings it (the instruction reader is now told that
+    amount; Symbiosis ignores it) — and its four cells; the auxiliary cell (the 3rd, which the package reads for shape
+    only): a zero address, then the payer as where a failed creation refunds the input (the build request's
+    `refundSrcAddress`: a read-only dry build of 2026-11-14 that asked for another address found it in that slot, and
+    the package's checks passed it), 3 zero bits and one cell held by hash to every recording's (both live escrows,
+    the dry builds of 2026-11-14), nothing else; the flags cell (the 4th) held by hash to every recording's too; the
+    config's one resolver, no Dutch auction, a destination, one full fill; the execution locked by ONE keccak hash and
+    naming the same resolver; the destination the reviewed EVM network, token and recipient, the resolver bound to
+    send at least the reviewed minimum; every cell read to its end. The pins (escrow and execution code, authority
+    key, timelocks, the deposit) are the package's, below.
   - *Bound beyond its bytes* (TON_CALLS `bind`, a new, asynchronous half of a rule: `omnistonEscrow.ts`, a chunk of its
     own with @ton/core and the package, loaded for this call only). (1) The build: omniston.ts keeps every escrow
     whose `validateTonEscrowPayload` passed, by its exact payload (`omnistonBuilds.ts`, in memory, the last 16) — the
@@ -1255,33 +1261,47 @@ trusting the engine's summary (which skips a custom payload and doesn't read the
   - *Route list.* `tonCallSigned("omniston", USDT, EVM chain, ERC-20)` lifts the refusal for that case only; Omniston's
     TON → TON swaps, an escrow from native TON or another jetton, to a native coin or Tron stay refused.
   - *Still trusted*, as on the phone: Omniston's contracts and the resolver — its price, its identity and its deposit
-    (the quote's, held to the build), whether it fills at all (else a refund after the timelocks); the auxiliary and
-    flags cells (shape only, the package's); TonAPI for the package's own jetton-wallet check (the pinned-code wallet
-    backstops it); the gas it attaches (0.4 TON in every recording), capped at 0.5 TON, the excess refunded. What the
-    resolver is bound to send includes the protocol fee (0.03 % recorded); what the recipient gets is the quote's
-    output, at least the reviewed minimum (checkPlan), and the disclosure checks it on chain before the secret leaves.
-    No TON-source escrow has been signed from the web live yet.
+    (the quote's, held to the build), whether it fills at all (else a refund after the timelocks); what the auxiliary
+    cell's zero address and cell and the flags cell mean (unread, held byte for byte to the recordings: a change on
+    Omniston's side is refused until it is recorded and reviewed); that 0.12 TON pays for the escrow's deploy (the
+    recorded amount, not measured against the minter's code); TonAPI for the package's own jetton-wallet check (the
+    pinned-code wallet backstops it); the gas it attaches (0.4 TON in every recording), capped at 0.5 TON, the excess
+    refunded. What the resolver is bound to send includes the protocol fee (0.03 % recorded); what the recipient gets
+    is the quote's output, at least the reviewed minimum (checkPlan), and the disclosure checks it on chain before the
+    secret leaves. No TON-source escrow has been signed from the web live yet. (The phone runs only the package's
+    checks on this body, so it lets a failed creation's refund elsewhere and 1 nanoTON of escrow gas through: hardening
+    for the SDK's owner — `validatePayload`/`verifyTonEscrowBuild` should bind the auxiliary cell's refund address to
+    `ownerAddress` and floor the escrow's gas.)
   - *Tests.* `tests/unit/execute/omnistonTon.test.ts` over `omnistonEscrowRev2.fixture.json` (the phone's live rev2
     capture of 2026-11-11, USDT on TON → USDC on Base): the pin against the package's table; every field at the plan
     (target, bounce, gas, op, amount, rev1 or another minter, excess, custom payload, forward at or past the TON
     attached, 0, 1 nanoTON, just under the floor, inline or trailing data; the order's op, owner twice, layout bits,
-    escrow gas, config op, Dutch auction, parts, a sha256 or two-resolver execution, network, token, recipient, a
-    delivery under the reviewed minimum); the binding (bytes the provider didn't check, another quote id, someone
-    else's hashlock, no secret on disk, another or two secrets, a build kept with another hash or hashing function;
-    another resolver, deposit, window, timelocks, escrow code, authority key or delivery than the quote's; the review's
-    recipient, network, token, owner or amount; the reviewed minimum above what the resolver sends; native TON); the
+    escrow gas at or past what the transfer forwards, 0, 1 nanoTON or just under 0.12 TON; the auxiliary cell's refund
+    to someone else, to the payer's jetton wallet or to no address, its zero address, its 3 bits, another cell of the
+    same shape (an address in it) or another one, a bit or a cell after them; the flags another value, a bit set in
+    its tail or a cell after it; config op, Dutch auction, parts, a sha256 or two-resolver execution, network, token,
+    recipient, a delivery under the reviewed minimum), both live escrows carrying the same auxiliary cell (the payer
+    aside) and flags; the binding (bytes the provider didn't check, another quote id, someone else's hashlock, no
+    secret on disk, another or two secrets, a build kept with another hash or hashing function; another resolver,
+    deposit, window, timelocks, escrow code, authority key or delivery than the quote's; the review's recipient,
+    network, token, owner or amount; the reviewed minimum above what the resolver sends; native TON), and the
+    package's checks passing what only the app's decode refuses (a failed creation refunded elsewhere, another zero
+    address or flags, 1 nanoTON of escrow gas: shape only, more than none); the
     phone's pins.test.ts:68-105 port (pass, destination, owner, token, amount, short delivery, not an escrow, native
-    TON, no request, rev1 refused by name); the account binding again right before the wallet (a secret cleared by then
-    is refused); the real engine and the real Omniston provider (`lazyOmniston` → `buildOmniston` over IndexedDB, its
-    WebSocket client replaced by a recording one) through executeSwap to a fake TON Connect wallet — one request (the
-    jetton wallet, 0.4 TON, the exact escrow), the one secret for the quote on disk while the wallet is asked and its
-    hash the escrow's hashlock; four tampered builds refused before the wallet (0.6 TON, non-bounceable, 1 nanoTON
-    forwarded, the secret gone after the build); and the secret's life through the activity tracker's `pollRecord`: not
+    TON, no request, rev1 refused by name); the TON Connect message (an armed escrow refunding a failed creation
+    elsewhere, or with 1 nanoTON of escrow gas, refused there too); the account binding again right before the wallet
+    (a secret cleared by then is refused); the real engine and the real Omniston provider (`lazyOmniston` →
+    `buildOmniston` over IndexedDB, its WebSocket client replaced by a recording one) through executeSwap to a fake TON
+    Connect wallet — one request (the jetton wallet, 0.4 TON, the exact escrow), the one secret for the quote on disk
+    while the wallet is asked and its hash the escrow's hashlock; six tampered builds refused before the wallet (0.6
+    TON, non-bounceable, 1 nanoTON forwarded, 1 nanoTON of escrow gas, a failed creation refunded elsewhere, the secret
+    gone after the build); and the secret's life through the activity tracker's `pollRecord`: not
     disclosed while `validateEvmOutputPosition` refuses or throws, disclosed after a reload (a new provider and stores
     over the same IndexedDB) once it passes, cleared on the fill. `tests/e2e/ton.spec.ts`: Omniston's WebSocket API
     stubbed (JSON-RPC, the capture's quote, the escrow built with the hashlock the page asked for) — the one TON
     Connect request is the jetton wallet, 0.4 TON and that escrow, the page's IndexedDB holding the one secret whose
-    hash locks it; a build forwarding the minter 1 nanoTON is refused before the wallet is asked.
+    hash locks it; a build forwarding the minter 1 nanoTON, having it forward the escrow 1 nanoTON, or refunding a
+    failed creation to another wallet is refused before the wallet is asked.
 
 ---
 

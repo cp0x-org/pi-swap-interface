@@ -170,9 +170,25 @@ const OMNISTON_ESCROW_CONFIG = 0xf2c6fa63;
 const OMNISTON_EXECUTION_KECCAK = 0xc8d4b428;
 /**
  * 0.3 TON: what the minter is notified with in every recording (live escrows of 2026-10-10 and 2026-11-11, the dry
- * build of 2026-11-13; 0.4 TON attached) — it deploys the escrow out of it, forwarding 0.12 TON on.
+ * builds of 2026-11-13 and 2026-11-14; 0.4 TON attached) — it deploys the escrow out of it, forwarding 0.12 TON on.
  */
 const OMNISTON_TON_FORWARD = 300_000_000n;
+/**
+ * 0.12 TON: what the minter forwards to the escrow it deploys in every recording (the quote's estimatedGasConsumption)
+ * — the escrow's own deploy gas. With less its creation fails and the input takes the failed-creation refund instead.
+ */
+const OMNISTON_ESCROW_GAS = 120_000_000n;
+/**
+ * The escrow order's auxiliary cell (its 3rd reference, 537 bits), which the package checks for shape only: a zero
+ * address, then the address a failed creation refunds the input to (the build request's refundSrcAddress, the payer:
+ * a dry build of 2026-11-14 that asked for another found it there), 3 zero bits, and one cell (269 bits). That cell
+ * and the flags cell (the 4th reference, 98 bits) are held by hash to what every recording carries (the live escrows
+ * of 2026-10-10 and 2026-11-11, the dry builds of 2026-11-14): what else in them may route money isn't known, so
+ * nothing but the recorded value passes.
+ */
+const OMNISTON_ZERO_ADDRESS = `0:${"0".repeat(64)}`;
+const OMNISTON_AUX_TAIL = "78f332d22f9eaf2fc98b2b3098a54f4a3d3091a9016710fc47fe739f3b742395";
+const OMNISTON_FLAGS = "e8e6cd4667607b4d5fb5f7f3992ab3c5b68dd6008ab166bab48bbb65581079cd";
 /**
  * The EVM networks an Omniston escrow from TON may deliver on: those its package's escrow check encodes
  * (validators/ton.ts destinationChainId), each with an audited settlement contract (a test holds the two to the package).
@@ -194,13 +210,14 @@ const hex20 = (b: Uint8Array): string => `0x${Array.from(b, (x) => x.toString(16
 /**
  * The app's own read of Omniston's escrow order (beside its package's), every field where the money goes held to the
  * review: op `0xc0a5f0d9`, the quote id (bound to the secret this browser holds, in `bind`), the payer as owner — the
- * escrow refunds there — the TON the minter forwards to the escrow it deploys (some, and less than `forwardTon`, what
- * the transfer brings it: an escrow it can't pay for is never deployed) and its four cells; the config's one resolver,
- * no Dutch auction (a price curve the quote doesn't carry), a destination, a single full fill; the execution locked by
- * ONE keccak hash (`bind` holds it to this browser's secret), naming the same resolver, its owner data the payer
- * again; the destination the reviewed network, token and recipient, the resolver bound to send at least the reviewed
- * minimum. Each cell read to its end. The pins — escrow and execution code, authority key, timelocks, the resolver's
- * deposit — are the package's (`bind`).
+ * escrow refunds there — the TON the minter forwards to the escrow it deploys (at least the recorded 0.12 TON, and
+ * less than `forwardTon`, what the transfer brings it: an escrow it can't pay for is never deployed) and its four
+ * cells; the auxiliary cell's refund of a failed creation the payer too, the rest of it and the flags cell as every
+ * recording has them; the config's one resolver, no Dutch auction (a price curve the quote doesn't carry), a
+ * destination, a single full fill; the execution locked by ONE keccak hash (`bind` holds it to this browser's secret),
+ * naming the same resolver, its owner data the payer again; the destination the reviewed network, token and
+ * recipient, the resolver bound to send at least the reviewed minimum. Each cell read to its end. The pins — escrow
+ * and execution code, authority key, timelocks, the resolver's deposit — are the package's (`bind`).
  */
 function omnistonInstruction(r: ReviewedSwap, s: Slice, forwardTon: bigint): string | null {
   const self = toRawAddress(r.refundAddress);
@@ -212,9 +229,17 @@ function omnistonInstruction(r: ReviewedSwap, s: Slice, forwardTon: bigint): str
     if (s.loadBit()) return "omniston: the escrow order isn't in the layout its package reads";
     if (s.loadAddress().toRawString() !== self) return "omniston: the escrow's owner (where it refunds) isn't you";
     const escrowGas = s.loadCoins();
-    if (escrowGas <= 0n || escrowGas >= forwardTon) return "omniston: the escrow order asks the minter to forward more TON than the transfer brings it";
+    if (escrowGas < OMNISTON_ESCROW_GAS) return "omniston: the escrow order forwards the escrow too little TON to deploy it";
+    if (escrowGas >= forwardTon) return "omniston: the escrow order asks the minter to forward more TON than the transfer brings it";
     if (s.loadBit() || s.remainingBits !== 0 || s.remainingRefs !== 4) return "omniston: the escrow order isn't in the layout its package reads";
     const config = s.loadRef().beginParse();
+    s.loadRef(); // the escrow code: pinned by the package (bind)
+    const aux = s.loadRef().beginParse();
+    if (aux.loadAddress().toRawString() !== OMNISTON_ZERO_ADDRESS) return "omniston: the escrow's auxiliary cell isn't the one every build carries";
+    if (aux.loadAddress().toRawString() !== self) return "omniston: the escrow refunds a failed creation to another wallet than yours";
+    if (aux.loadUint(3) !== 0 || aux.remainingBits !== 0 || aux.remainingRefs !== 1 || aux.loadRef().hash().toString("hex") !== OMNISTON_AUX_TAIL)
+      return "omniston: the escrow's auxiliary cell isn't the one every build carries";
+    if (s.loadRef().hash().toString("hex") !== OMNISTON_FLAGS) return "omniston: the escrow's flags aren't the ones every build carries";
     if (config.loadUint(32) !== OMNISTON_ESCROW_CONFIG) return "omniston: the escrow's config can't be read";
     const resolver = config.loadAddress().toRawString();
     if (config.loadBit()) config.loadBuffer(32); // the authority key: pinned by the package

@@ -22,7 +22,8 @@
  *   capture of 2026-11-11 (tests/unit/execute/omnistonEscrowRev2.fixture.json) and building the escrow with the hashlock
  *   the page asked for. The one TON Connect request is the payer's USDT jetton wallet, 0.4 TON and that exact escrow,
  *   whose hashlock is the hash of the one secret IndexedDB holds for the quote; a build that forwards the minter too
- *   little TON (which Omniston's package lets through) is refused before the wallet is asked.
+ *   little TON, has the minter forward the escrow too little to deploy it, or refunds a failed creation to another
+ *   wallet (each of which Omniston's package lets through) is refused before the wallet is asked.
  */
 import {randomBytes} from "node:crypto";
 import {readFileSync} from "node:fs";
@@ -417,16 +418,33 @@ function omnistonJson(v: unknown): unknown {
   return Object.fromEntries(Object.entries(v).map(([k, x]) => [snake(k), omnistonJson(x)]));
 }
 
-/** The capture's escrow with the quote id and the hashlock the page asked for (`forwardTon`: what the transfer forwards). */
-function omnistonEscrow(quoteId: string, hashlock: Buffer, forwardTon?: bigint): string {
+/** What a stubbed build rewrites: the TON the transfer forwards, what the minter forwards to the escrow, the address a failed creation refunds (raw). */
+interface OmnistonTamper {
+  forwardTon?: bigint;
+  escrowGas?: bigint;
+  refundTo?: string;
+}
+
+/** The order's auxiliary cell with another address where a failed creation refunds (its 2nd), the rest as it is. */
+function refundingTo(aux: Cell, raw: string): Cell {
+  const a = aux.beginParse();
+  const zero = a.loadAddress();
+  a.loadAddress();
+  return beginCell().storeAddress(zero).storeAddress(Address.parseRaw(raw)).storeBits(a.loadBits(a.remainingBits)).storeRef(a.loadRef()).endCell();
+}
+
+/** The capture's escrow with the quote id and the hashlock the page asked for, `tamper` applied. */
+function omnistonEscrow(quoteId: string, hashlock: Buffer, tamper: OmnistonTamper = {}): string {
   const s = Cell.fromBoc(Buffer.from(OMN.escrowResponse.messages[0]!.payload, "hex"))[0]!.beginParse();
   const head = {op: s.loadUint(32), queryId: s.loadUintBig(64), amount: s.loadCoins(), destination: s.loadAddress(), response: s.loadAddress(), custom: s.loadMaybeRef(), forwardTon: s.loadCoins()};
   s.loadBit();
   const order = s.loadRef();
   const o = order.beginParse();
   o.skip(32 + 256);
-  const rest = o.loadBits(o.remainingBits);
-  const [config, ...refs] = [o.loadRef(), o.loadRef(), o.loadRef(), o.loadRef()];
+  // A layout bit, the owner, the TON the minter forwards to the escrow, a layout bit; then the order's four cells.
+  const [bit1, owner, escrowGas, bit2] = [o.loadBit(), o.loadAddress(), o.loadCoins(), o.loadBit()];
+  const [config, code, aux, flags] = [o.loadRef(), o.loadRef(), o.loadRef(), o.loadRef()];
+  const refs = [code, tamper.refundTo ? refundingTo(aux, tamper.refundTo) : aux, flags];
   const c = config.beginParse();
   const configHead = c.loadBits(c.remainingBits);
   const [state, destination] = [c.loadRef(), c.loadRef()];
@@ -436,7 +454,14 @@ function omnistonEscrow(quoteId: string, hashlock: Buffer, forwardTon?: bigint):
   const newState = beginCell().storeRef(state.refs[0]!).storeRef(execution).endCell();
   // The config's bits run to its two refs: `state` then the destination (its bit is among the bits before).
   const newConfig = beginCell().storeBits(configHead).storeRef(newState).storeRef(destination).endCell();
-  const newOrder = beginCell().storeUint(0xc0a5f0d9, 32).storeBuffer(Buffer.from(quoteId.padStart(64, "0"), "hex")).storeBits(rest).storeRef(newConfig);
+  const newOrder = beginCell()
+    .storeUint(0xc0a5f0d9, 32)
+    .storeBuffer(Buffer.from(quoteId.padStart(64, "0"), "hex"))
+    .storeBit(bit1)
+    .storeAddress(owner)
+    .storeCoins(tamper.escrowGas ?? escrowGas)
+    .storeBit(bit2)
+    .storeRef(newConfig);
   for (const r of refs) newOrder.storeRef(r);
   return beginCell()
     .storeUint(head.op, 32)
@@ -445,7 +470,7 @@ function omnistonEscrow(quoteId: string, hashlock: Buffer, forwardTon?: bigint):
     .storeAddress(head.destination)
     .storeAddress(head.response)
     .storeMaybeRef(head.custom)
-    .storeCoins(forwardTon ?? head.forwardTon)
+    .storeCoins(tamper.forwardTon ?? head.forwardTon)
     .storeBit(1)
     .storeRef(newOrder.endCell())
     .endCell()
@@ -456,14 +481,15 @@ function omnistonEscrow(quoteId: string, hashlock: Buffer, forwardTon?: bigint):
 /**
  * Prices, TonAPI (the payer's TON and USDT, its USDT jetton wallet and that wallet's state) and Omniston's WebSocket API
  * (JSON-RPC: every RFQ answered with the capture's quote under a fresh id, the escrow built from the capture with the
- * hashlock the page asked for — `tamper` rewrites what the build forwards — and an order feed that never names a fill,
- * so nothing is disclosed); anything else off the page's origin is aborted and recorded.
+ * hashlock the page asked for — `state` rewrites what the build forwards or where a failed creation refunds — and an
+ * order feed that never names a fill, so nothing is disclosed); anything else off the page's origin is aborted and
+ * recorded.
  */
 async function stubOmniston(page: Page, origin: string) {
   const unexpected: string[] = [];
   const methods: string[] = [];
   const builds: {quoteId: string; hash: string; payload: string}[] = [];
-  const state: {forwardTon?: bigint} = {};
+  const state: OmnistonTamper = {};
   await page.route(
     (url) => url.origin !== origin,
     async (route) => {
@@ -511,7 +537,7 @@ async function stubOmniston(page: Page, origin: string) {
       } else if (m.method === OMN_BUILD) {
         const quoteId = String(m.params.quote_id);
         const hash = Buffer.from(String((m.params.htlc_secrets as {provided: {hashes: string[]}}).provided.hashes[0]), "base64");
-        const payload = omnistonEscrow(quoteId, hash, state.forwardTon);
+        const payload = omnistonEscrow(quoteId, hash, state);
         builds.push({quoteId, hash: hash.toString("hex"), payload});
         const sent = OMN.escrowResponse.messages[0]!;
         reply({messages: [{target_address: sent.targetAddress, send_amount: sent.sendAmount, payload}]});
@@ -603,3 +629,25 @@ test("TON: an Omniston escrow that forwards the minter too little TON to deploy 
   expect(await tonSent(page)).toBe(0);
   expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
 });
+
+// Two more fields of the order Omniston's package doesn't hold (more than none; shape only), each a build it passes.
+for (const [what, tamper, why] of [
+  ["has the minter forward the escrow 1 nanoTON (its creation fails)", {escrowGas: 1n}, "forwards the escrow too little TON to deploy it"],
+  ["refunds a failed creation to another wallet", {refundTo: `0:${"cd".repeat(32)}`}, "refunds a failed creation to another wallet than yours"],
+] as const) {
+  test(`TON: an Omniston escrow that ${what} is refused before the wallet is asked`, async ({page, baseURL}) => {
+    test.setTimeout(90_000);
+    const watch = watchPage(page);
+    const net = await stubOmniston(page, new URL(baseURL!).origin);
+    await injectFakeTonkeeper(page, OMN_RAW);
+    await reviewOmniston(page);
+    Object.assign(net.state, tamper);
+    await page.getByTestId("swap-confirm").click();
+
+    await expect(page.getByTestId("swap-error")).toContainText(why, {timeout: 30_000});
+    await expect(page.getByTestId("swap-error")).toContainText("nothing was signed");
+    expect(net.builds.length, "the escrow built after Confirm").toBe(1);
+    expect(await tonSent(page)).toBe(0);
+    expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
+  });
+}
