@@ -1,0 +1,1549 @@
+{
+ "note": "Omniston swaps on TON built by omni-ws.ston.fi tonBuildSwap and never signed or sent: the SDK's recording (anywalletkit packages/protocol-swap2-omniston/tests/fixtures/live-ton-swaps-2026-10-22.json, trader = dest; 'quote' as the RFQ answered) and read-only dry builds of 2026-11-13 (Tether's treasury as trader and recipient). minOut = the quote's minOutputAmount at the requested slippage.",
+ "tonapiNote": "TonAPI's answers the Omniston package's own build checks read for DeDust's TON/USDT pools (the SDK's recording of 2026-10-22), replayed by tests/e2e/ton.spec.ts",
+ "tonapi": {
+  "/v2/accounts/EQA-X_yo3fzzbDbJ_0bzFWKqtRuZFIRa1sJsveZJ1YpViO3r": {
+   "address": "0:3e5ffca8ddfcf36c36c9ff46f31562aab51b9914845ad6c26cbde649d58a5588",
+   "balance": 157132336,
+   "last_activity": 1792628239,
+   "status": "active",
+   "interfaces": [
+    "dedust_pool",
+    "jetton_master"
+   ],
+   "name": "DeDust Pool: TON/USDT",
+   "is_scam": false,
+   "memo_required": false,
+   "get_methods": [
+    "get_assets",
+    "get_jetton_data",
+    "get_reserves",
+    "is_stable"
+   ],
+   "is_wallet": false
+  },
+  "/v2/blockchain/accounts/EQA-X_yo3fzzbDbJ_0bzFWKqtRuZFIRa1sJsveZJ1YpViO3r/methods/get_assets": {
+   "success": true,
+   "exit_code": 0,
+   "stack": [
+    {
+     "type": "cell",
+     "cell": "b5ee9c7201010101000300000108"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c72010101010024000043100b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe8"
+    }
+   ],
+   "decoded": {
+    "asset0": {
+     "sum_type": "Native",
+     "native": {},
+     "jetton": {
+      "workchain_id": 0,
+      "address": "0000000000000000000000000000000000000000000000000000000000000000"
+     },
+     "extra_currency": {
+      "currency_id": 0
+     }
+    },
+    "asset1": {
+     "sum_type": "Jetton",
+     "native": {},
+     "jetton": {
+      "workchain_id": 0,
+      "address": "b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe"
+     },
+     "extra_currency": {
+      "currency_id": 0
+     }
+    }
+   }
+  },
+  "/v2/accounts/EQAH4MY1EbqP7Gg2wJkoZvoCG4BYPsEG5lVBXPZn0UqXNz4y": {
+   "address": "0:07e0c63511ba8fec6836c0992866fa021b80583ec106e655415cf667d14a9737",
+   "balance": 19662047337106,
+   "last_activity": 1792628340,
+   "status": "active",
+   "interfaces": [
+    "dedust_v2_cpmm"
+   ],
+   "get_methods": [
+    "get_pool_data"
+   ],
+   "is_wallet": false
+  },
+  "/v2/blockchain/accounts/EQAH4MY1EbqP7Gg2wJkoZvoCG4BYPsEG5lVBXPZn0UqXNz4y/methods/get_pool_data": {
+   "success": true,
+   "exit_code": 0,
+   "stack": [
+    {
+     "type": "num",
+     "num": "0x2"
+    },
+    {
+     "type": "num",
+     "num": "-0x1"
+    },
+    {
+     "type": "num",
+     "num": "-0x1"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c72010101010024000043801622753296a04942ce33ed2272651d6eb2b2d87144beb2051628dfd9b86c43bfd0"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c7201010101000300000120"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c7201010301008f0002012001020085bff2d564daf1c07574946d9e4711c6cde06b0d49907ee15e3d17b643eb7f6fc9044008ee5427dba8971e7d59dbdff667d757ab34f9e89ed25c4b334938b982d74fbbf80085bfd889d4ca5a81250b38cfb489c99475bacacb61c512fac81458a37f66e1b10eff40007843595c5b99834631bd8eddd47c0efc14ce1d34ef9c96c0557e8e855b4a3428"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c7201010301008f0002012001020085bfc3c21acae2dccc1a318dec76eea3e077e0a670e9a77ce4b602abf4742ada51a1400b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe80085bfc772a13edd44b8f3eacedeffb33ebabd59a7cf44f692e2599a49c5cc16ba7ddfc0065aac9b5e380eae928db3c8e238d9bc0d61a9320fdc2bc7a2f6c87d6fedf92088"
+    },
+    {
+     "type": "null"
+    },
+    {
+     "type": "num",
+     "num": "0xa"
+    },
+    {
+     "type": "num",
+     "num": "0x631ffea61"
+    },
+    {
+     "type": "num",
+     "num": "0x11d28a23ca5f"
+    },
+    {
+     "type": "num",
+     "num": "0xa8203a15ed"
+    },
+    {
+     "type": "num",
+     "num": "0x386ee162"
+    },
+    {
+     "type": "num",
+     "num": "0x0"
+    },
+    {
+     "type": "num",
+     "num": "0x0"
+    },
+    {
+     "type": "num",
+     "num": "0x0"
+    },
+    {
+     "type": "num",
+     "num": "0xd9f8afc3b2a55db6bd0e45871056"
+    },
+    {
+     "type": "num",
+     "num": "0x0"
+    },
+    {
+     "type": "cell",
+     "cell": "b5ee9c7201010301003e0002014801020035000000000001e061b4f2207b759bfdc864e0e6eedc000d5b0894d00033000000000001dc932a6e85a2f2bd9248d7399289600d5b0894d0"
+    }
+   ],
+   "decoded": {
+    "status": 2,
+    "deposit_active": true,
+    "swap_active": true,
+    "asset_x": "0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe",
+    "asset_y": "",
+    "wallets_by_assets": "b5ee9c7201010301008f0002012001020085bff2d564daf1c07574946d9e4711c6cde06b0d49907ee15e3d17b643eb7f6fc9044008ee5427dba8971e7d59dbdff667d757ab34f9e89ed25c4b334938b982d74fbbf80085bfd889d4ca5a81250b38cfb489c99475bacacb61c512fac81458a37f66e1b10eff40007843595c5b99834631bd8eddd47c0efc14ce1d34ef9c96c0557e8e855b4a3428",
+    "assets_by_wallets": "b5ee9c7201010301008f0002012001020085bfc3c21acae2dccc1a318dec76eea3e077e0a670e9a77ce4b602abf4742ada51a1400b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe80085bfc772a13edd44b8f3eacedeffb33ebabd59a7cf44f692e2599a49c5cc16ba7ddfc0065aac9b5e380eae928db3c8e238d9bc0d61a9320fdc2bc7a2f6c87d6fedf92088",
+    "wallets_resolutions": null,
+    "base_fee_bps": 10,
+    "reserve_x": "26608659041",
+    "reserve_y": "19595958405727",
+    "liquidity": "722095183341",
+    "protocol_fee_x": "946790754",
+    "protocol_fee_y": "0",
+    "created_fee_x": "0",
+    "created_fee_y": "0",
+    "x_lp_fee_per_token": "4420985864756835297474987539501142",
+    "y_lp_fee_per_token": "0",
+    "rewards": "b5ee9c7201010301003e0002014801020035000000000001e061b4f2207b759bfdc864e0e6eedc000d5b0894d00033000000000001dc932a6e85a2f2bd9248d7399289600d5b0894d0"
+   }
+  }
+ },
+ "cases": [
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "DeDustCPMMV2",
+   "routeSteps": [
+    "DeDustCPMMV2"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "2000000000",
+   "outputUnits": "2711320",
+   "minOut": "2684207",
+   "quote": {
+    "rfqId": "c5451548b8cfdf9f436691c74b3f23ba31d747fbfba095e2fd5573142ea84521",
+    "quoteId": "6fe838236163d2a65c8c0d923373222c4e54060dbfe7c80cf72584848cf1ee1e",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "2000000000",
+    "outputUnits": "2711320",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627579,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "DeDustCPMMV2",
+            "inputUnits": "2000000000",
+            "outputUnits": "2711320"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "2684207",
+      "recommendedMinOutputAmount": "2684207",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 102
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "5000000"
+   },
+   "message": {
+    "targetAddress": "EQAH4MY1EbqP7Gg2wJkoZvoCG4BYPsEG5lVBXPZn0UqXNz4y",
+    "sendAmount": "2100000000",
+    "payload": "b5ee9c7241010301008c000221a5a7cbf8f72584848cf1ee1e477359400801020019c442500f328f52f0000000000100cb80136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fa04009b5c9d7e1ddfc2cb202ddd33608ab71db8d227e501f9763d7f2c1373fffcb87d02004dae4ebf0eefe1659016ee99b0455b8edc6913f280fcbb1ebf9609b9fffe5c3ec5887710c"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "200000000000",
+   "outputUnits": "271301641",
+   "minOut": "268588625",
+   "quote": {
+    "rfqId": "22ab7fad4d8fb3df281664d981b0293b36dcbe9a617b119605e3414bf7568fc5",
+    "quoteId": "496b34b55a1506b92f6f5a1a1198624881a30d8f73337c1b4b0c9f788bfaa7f",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "200000000000",
+    "outputUnits": "271301641",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627579,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "200000000000",
+            "outputUnits": "271301641"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "268588625",
+      "recommendedMinOutputAmount": "268588625",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 108
+     }
+    },
+    "gasBudget": "220000000",
+    "estimatedGasConsumption": "20000000"
+   },
+   "message": {
+    "targetAddress": "EQCSIMGBps_qzRG3uPYhON8bucyCtu0mYdL1-u4gSz77IBa3",
+    "sendAmount": "200220000000",
+    "payload": "b5ee9c724101030100d600016601f3835db4b0c9f788bfaa7f52e90edd00080136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fb0101e16664de2a801245ac4fafb1db7a01c9c477b618a94eddcbc3e8cae7435e882f0aff47c47d23f0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f6004dae4ebf0eefe1659016ee99b0455b8edc6913f280fcbb1ebf9609b9fffe5c3e800000007fffffffc002005341002565180136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fa000000100f7f0eec"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "4000000000000",
+   "outputUnits": "5414848184",
+   "minOut": "5360699703",
+   "quote": {
+    "rfqId": "5fa48a9b242ffa01ab7e6afca3b4bfe3c4d29ad350c0c899eca8911bae8fd5e4",
+    "quoteId": "a174d67ebf5ca820a64875c3c8b7b06af8badcbcd7389f74641276a5c2b49592",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "4000000000000",
+    "outputUnits": "5414848184",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627581,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "4000000000000",
+            "outputUnits": "5414848184"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "5360699703",
+      "recommendedMinOutputAmount": "5360699703",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 2169
+     }
+    },
+    "gasBudget": "220000000",
+    "estimatedGasConsumption": "20000000"
+   },
+   "message": {
+    "targetAddress": "EQCSIMGBps_qzRG3uPYhON8bucyCtu0mYdL1-u4gSz77IBa3",
+    "sendAmount": "4000220000000",
+    "payload": "b5ee9c724101030100d800016801f3835d641276a5c2b49592603a35294400080136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fb0101e16664de2a801245ac4fafb1db7a01c9c477b618a94eddcbc3e8cae7435e882f0aff47c47d23f0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f6004dae4ebf0eefe1659016ee99b0455b8edc6913f280fcbb1ebf9609b9fffe5c3e800000007fffffffc00200555013f85c93780136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fa0000001002c27e59"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "USDT>GRAM",
+   "protocols": "DeDust",
+   "routeSteps": [
+    "DeDust"
+   ],
+   "trader": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "dest": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "amountIn": "5000000",
+   "outputUnits": "3681327146",
+   "minOut": "3644513875",
+   "quote": {
+    "rfqId": "98fc096b36cb590463598d898554e3c788f376db491390df22e9f42395c8f1ed",
+    "quoteId": "fa18bf97175005d03a2809381379855c447651db99b2602e9e1c80926b4b2fcf",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "inputUnits": "5000000",
+    "outputUnits": "3681327146",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627621,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "DeDust",
+            "inputUnits": "5000000",
+            "outputUnits": "3681327146"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "3644513875",
+      "recommendedMinOutputAmount": "3644513875",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 18
+     }
+    },
+    "gasBudget": "150000000",
+    "estimatedGasConsumption": "10000000"
+   },
+   "message": {
+    "targetAddress": "EQAjdEks4t5n-kvKH8qrzJqkbWczKMOOQP_-djSgJ00fZEyI",
+    "sendAmount": "150000000",
+    "payload": "b5ee9c724101040100fa0001ae0f8a7ea59e1c80926b4b2fcf34c4b4080031551c5ddaa2e8fb5c06780f3727107b28395b1eca8b3e5dd39ae8e96d71dabb0022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167c80bebc201010155e3a0d4828007cbff951bbf9e6d86d93fe8de62ac5556a37322908b5ad84d97bcc93ab14ab104d93ade534002014b0000000080115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3e303008d3c37d7e980115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3f0022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167e9bd5ecd0"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "USDT>GRAM",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "dest": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "amountIn": "500000000",
+   "outputUnits": "367743165504",
+   "minOut": "364065733849",
+   "quote": {
+    "rfqId": "fde71bac8317a8d5c9d532bf9293c6cc5c10a0e4535986f87ad567565aaf02db",
+    "quoteId": "84b055ab9895fd577730471bf9541517fc154fc8fbc77224bf3c0df47f2a2bf1",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "inputUnits": "500000000",
+    "outputUnits": "367743165504",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627622,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "500000000",
+            "outputUnits": "367743165504"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "364065733849",
+      "recommendedMinOutputAmount": "364065733849",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 200
+     }
+    },
+    "gasBudget": "260000000",
+    "estimatedGasConsumption": "12000000"
+   },
+   "message": {
+    "targetAddress": "EQAjdEks4t5n-kvKH8qrzJqkbWczKMOOQP_-djSgJ00fZEyI",
+    "sendAmount": "260000000",
+    "payload": "b5ee9c724101030100fc0001b00f8a7ea5bf3c0df47f2a2bf141dcd650080125c28235ca8d125e676591513d520721b1fe99f7722f4c87723ce7ee0dfb73a30022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167c81908b1010101e16664de2a801244183034d9fd59a236f71ec4271be377399056dda4cc3a5ebf5dc40967df6410022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167e00457de58b19ac75905f0d74db085149c01c6c250843f3fa4e665fc0237ace42cf800000007fffffffc0020055554c4023cd980115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3e00000010bc4bd3d2"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "USDT>GRAM",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "dest": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "amountIn": "10000000000",
+   "outputUnits": "7327004782658",
+   "minOut": "7253734734832",
+   "quote": {
+    "rfqId": "82a88cd7f68bd8866d36b84de90abc11423e47e479974d834df11dd566a2ebca",
+    "quoteId": "a321f7a89212a1cf30f0a095a554f2061d26d35f67107b5169201c930e4b3c57",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "inputUnits": "10000000000",
+    "outputUnits": "7327004782658",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627623,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "10000000000",
+            "outputUnits": "7327004782658"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "7253734734832",
+      "recommendedMinOutputAmount": "7253734734832",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 3987
+     }
+    },
+    "gasBudget": "260000000",
+    "estimatedGasConsumption": "12000000"
+   },
+   "message": {
+    "targetAddress": "EQAjdEks4t5n-kvKH8qrzJqkbWczKMOOQP_-djSgJ00fZEyI",
+    "sendAmount": "260000000",
+    "payload": "b5ee9c724101030100fe0001b20f8a7ea569201c930e4b3c57502540be40080125c28235ca8d125e676591513d520721b1fe99f7722f4c87723ce7ee0dfb73a30022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167c81908b1010101e16664de2a801244183034d9fd59a236f71ec4271be377399056dda4cc3a5ebf5dc40967df6410022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167e00457de58b19ac75905f0d74db085149c01c6c250843f3fa4e665fc0237ace42cf800000007fffffffc002005760698e4483bf080115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3e00000010d6200018"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "USDT>USDe",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "dest": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "amountIn": "5000000",
+   "outputUnits": "4997005",
+   "minOut": "4947035",
+   "quote": {
+    "rfqId": "425ab24ef8f7b6d3456be5166882c55ee7ebfe2b04fb064389d4df605b29053b",
+    "quoteId": "24f986de04a258146c5c1cb0510d7a967f30d08d3f7c1f618391f1581cfd4da3",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"
+       }
+      }
+     }
+    },
+    "inputUnits": "5000000",
+    "outputUnits": "4997005",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627625,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "5000000",
+            "outputUnits": "4997005"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "4947035",
+      "recommendedMinOutputAmount": "4947035",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 1
+     }
+    },
+    "gasBudget": "289000000",
+    "estimatedGasConsumption": "20000000"
+   },
+   "message": {
+    "targetAddress": "EQAjdEks4t5n-kvKH8qrzJqkbWczKMOOQP_-djSgJ00fZEyI",
+    "sendAmount": "289000000",
+    "payload": "b5ee9c724101030100f90001ae0f8a7ea58391f1581cfd4da334c4b40800a46afff33251480ab6dab42434437a3fe464a9dbe5f525f9642ab4d2ef6eac890022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167c81c7db3810101e16664de2a800a3355059d44f0050eebe67cf45112cb17e1929b391619a893a4bc7cc30ecf4770022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167e00457de58b19ac75905f0d74db085149c01c6c250843f3fa4e665fc0237ace42cf800000007fffffffc002005134b7c5b80115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3e000000104af0b6f6"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "StonFiV1",
+   "routeSteps": [
+    "StonFiV1"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "1000000000000",
+   "outputUnits": "1355473953",
+   "minOut": "1341919214",
+   "quote": {
+    "rfqId": "9dec1a207a99b751d19aee7d6ab3fde87a0e422304b518df73aad509db9c5a0c",
+    "quoteId": "54b651287e04986d87899f74928557abc070057440ef7d6b97a7afc8d61589c9",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "1000000000000",
+    "outputUnits": "1355473953",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627638,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV1",
+            "inputUnits": "1000000000000",
+            "outputUnits": "1355473953"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "1341919214",
+      "recommendedMinOutputAmount": "1341919214",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 529
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "22500000"
+   },
+   "message": {
+    "targetAddress": "EQARULUYsmJq1RiZ-YiH-IJLcAZUVkVff-KBPwEmmaQGH6aC",
+    "sendAmount": "1000100000000",
+    "payload": "b5ee9c724101020100aa0001b20f8a7ea597a7afc8d61589c95e8d4a51000800ef3b9902a271b2a01c8938a523cfe24e71847aaeb6a620001ed44a77ac0e709d0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f480bebc201010097259385618009dd924373a9aad41b28cec02da9384d67363af2034fc2a7ccc067e28d4110de889ff81fdd0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f50cd672da7"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "StonFiV1",
+   "routeSteps": [
+    "StonFiV1"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "10000000000000",
+   "outputUnits": "13490463294",
+   "minOut": "13355558662",
+   "quote": {
+    "rfqId": "56480b099994ec149fcb90c1b00acf3c197f48562c9d754a348aaf18a3d1f061",
+    "quoteId": "dc6b66e6389dbb5bf312ecbd85ef7f57504a63df20c3f8d625d1226405e7357",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "10000000000000",
+    "outputUnits": "13490463294",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792627641,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV1",
+            "inputUnits": "10000000000000",
+            "outputUnits": "13490463294"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "13355558662",
+      "recommendedMinOutputAmount": "13355558662",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 5268
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "22500000"
+   },
+   "message": {
+    "targetAddress": "EQARULUYsmJq1RiZ-YiH-IJLcAZUVkVff-KBPwEmmaQGH6aC",
+    "sendAmount": "10000100000000",
+    "payload": "b5ee9c724101020100ac0001b40f8a7ea5625d1226405e7357609184e72a000800ef3b9902a271b2a01c8938a523cfe24e71847aaeb6a620001ed44a77ac0e709d0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f480bebc201010099259385618009dd924373a9aad41b28cec02da9384d67363af2034fc2a7ccc067e28d4110de8a06381b4e0d0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f5060cee557"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "DeDust",
+   "routeSteps": [
+    "DeDust"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "2000000000",
+   "outputUnits": "2712120",
+   "minOut": "2684999",
+   "quote": {
+    "rfqId": "9fefc072c70eaa4dbda39fd0fa040b8d3c8a03ef01a44395d421f77c0e732842",
+    "quoteId": "a5d63fad8a5a480923d284959c8f858b384e5c3c7cfaf1c921a35e05cce5297",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "2000000000",
+    "outputUnits": "2712120",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792628215,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "DeDust",
+            "inputUnits": "2000000000",
+            "outputUnits": "2712120"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "2684999",
+      "recommendedMinOutputAmount": "2684999",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 9
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "20000000"
+   },
+   "message": {
+    "targetAddress": "EQDa4VOnTYlLvDJ0gZjNYm5PXfSmmtL6Vs6A_CZEtXCNICq_",
+    "sendAmount": "2100000000",
+    "payload": "b5ee9c724101030100ab00016bea06185d921a35e05cce52974773594008007cbff951bbf9e6d86d93fe8de62ac5556a37322908b5ad84d97bcc93ab14ab10328f847401014b0000000080136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fa302008d3c37d7e980136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fb0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f6c9ac1454"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "StonFiV1",
+   "routeSteps": [
+    "StonFiV1"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "200000000000",
+   "outputUnits": "271120476",
+   "minOut": "268409272",
+   "quote": {
+    "rfqId": "9095b14efe25a8ef36b1eec3eabbb28fe6240ddb468954db19b36ef834f0338c",
+    "quoteId": "411099f8eb15d1ac19807f0a1cd8b2124a72582b8f73cf2398ee394bfd6a8b90",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "200000000000",
+    "outputUnits": "271120476",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792628216,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV1",
+            "inputUnits": "200000000000",
+            "outputUnits": "271120476"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "268409272",
+      "recommendedMinOutputAmount": "268409272",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 105
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "22500000"
+   },
+   "message": {
+    "targetAddress": "EQARULUYsmJq1RiZ-YiH-IJLcAZUVkVff-KBPwEmmaQGH6aC",
+    "sendAmount": "200100000000",
+    "payload": "b5ee9c724101020100aa0001b20f8a7ea598ee394bfd6a8b9052e90edd000800ef3b9902a271b2a01c8938a523cfe24e71847aaeb6a620001ed44a77ac0e709d0026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f480bebc201010097259385618009dd924373a9aad41b28cec02da9384d67363af2034fc2a7ccc067e28d4110de881fff33710026d7275f8777f0b2c80b774cd822adc76e3489f9407e5d8f5fcb04dcffff2e1f506f90b5ba"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "USDT>GRAM",
+   "protocols": "StonFiV2",
+   "routeSteps": [
+    "StonFiV2"
+   ],
+   "trader": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "dest": "UQCK-8sWM1jrIL4a6bYQopOAONhKEIfn9JzMv4BG9ZyFn5M9",
+   "amountIn": "5000000",
+   "outputUnits": "3681109926",
+   "minOut": "3644298827",
+   "quote": {
+    "rfqId": "8e8536154724d8f808994f483276b915a06c7a87f6b46bd14c0f50c280a347a5",
+    "quoteId": "ea72e36f606eb7059151dd95d7e27840def87c651909589a930351e2b3808736",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "inputUnits": "5000000",
+    "outputUnits": "3681109926",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792628179,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "StonFiV2",
+            "inputUnits": "5000000",
+            "outputUnits": "3681109926"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "3644298827",
+      "recommendedMinOutputAmount": "3644298827",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 2
+     }
+    },
+    "gasBudget": "260000000",
+    "estimatedGasConsumption": "12000000"
+   },
+   "message": {
+    "targetAddress": "EQAjdEks4t5n-kvKH8qrzJqkbWczKMOOQP_-djSgJ00fZEyI",
+    "sendAmount": "260000000",
+    "payload": "b5ee9c724101030100fa0001ae0f8a7ea5930351e2b380873634c4b4080125c28235ca8d125e676591513d520721b1fe99f7722f4c87723ce7ee0dfb73a30022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167c81908b1010101e16664de2a801244183034d9fd59a236f71ec4271be377399056dda4cc3a5ebf5dc40967df6410022bef2c58cd63ac82f86ba6d8428a4e00e36128421f9fd27332fe011bd672167e00457de58b19ac75905f0d74db085149c01c6c250843f3fa4e665fc0237ace42cf800000007fffffffc00200534d937964b80115f7962c66b1d6417c35d36c2145270071b094210fcfe939997f008deb390b3e00000010fe4b8024"
+   }
+  },
+  {
+   "recorded": "sdk 2026-10-22",
+   "pair": "GRAM>USDT",
+   "protocols": "SwapCoffee",
+   "routeSteps": [
+    "SwapCoffee"
+   ],
+   "trader": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "dest": "UQCbXJ1-Hd_CyyAt3TNgircduNIn5QH5dj1_LBNz__y4fQaq",
+   "amountIn": "1000000000",
+   "outputUnits": "1357059",
+   "minOut": "1343489",
+   "quote": {
+    "rfqId": "d8b4e563a1a4454cc847d0b127cd08b2d8d267683707f5a4fdfdb57b5d2189f2",
+    "quoteId": "b92e53ef160d151a5906025507f79250a13e708eb2f48534d0d6b9080e96a04f",
+    "resolverId": "EQDV8OoP-iqaGDncSOo0dAsPpS0KY_z-d1GraV8fArOy4L1g",
+    "resolverName": "Omniston",
+    "inputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "native",
+        "value": {}
+       }
+      }
+     }
+    },
+    "outputAsset": {
+     "chain": {
+      "$case": "ton",
+      "value": {
+       "kind": {
+        "$case": "jetton",
+        "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+       }
+      }
+     }
+    },
+    "inputUnits": "1000000000",
+    "outputUnits": "1357059",
+    "integratorFeeUnits": "0",
+    "protocolFeeUnits": "0",
+    "quoteTimestamp": 1792628231,
+    "estimatedSettlementDuration": 1,
+    "settlementData": {
+     "$case": "swap",
+     "value": {
+      "routes": [
+       {
+        "steps": [
+         {
+          "inputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "native",
+              "value": {}
+             }
+            }
+           }
+          },
+          "outputAsset": {
+           "chain": {
+            "$case": "ton",
+            "value": {
+             "kind": {
+              "$case": "jetton",
+              "value": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+             }
+            }
+           }
+          },
+          "chunks": [
+           {
+            "protocol": "SwapCoffee",
+            "inputUnits": "1000000000",
+            "outputUnits": "1357059"
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "minOutputAmount": "1343489",
+      "recommendedMinOutputAmount": "1343489",
+      "recommendedSlippagePips": 10000,
+      "priceImpactPips": 1484
+     }
+    },
+    "gasBudget": "100000000",
+    "estimatedGasConsumption": "35000000"
+   },
+   "message": {
+    "targetAddress": "EQDbLqT_zhxpERj0EnXG2iqr1g71ODb_Xoc74R8RzUSElKGD",
+    "sendAmount": "1200000000",
+    "payload": "b5ee9c72410103010064000169c0ffee00d0d6b9080e96a04f43b9aca00c44cf0b64eb9dedfb010c7b24a508140d86f6e07789f9383bb9b2141ea9c08ea31480014001014bffffffff80136b93afc3bbf8596405bba66c1156e3b71a44fca03f2ec7afe5826e7fff970fa6020001201768c9f2"
+   }
+  },
+  {
+   "recorded": "dry 2026-11-13",
+   "pair": "GRAM>USDT",
+   "protocols": "DeDustCPMMV2",
+   "routeSteps": [
+    "DeDustCPMMV2"
+   ],
+   "trader": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "dest": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "amountIn": "2000000000",
+   "minOut": "2233177",
+   "message": {
+    "targetAddress": "EQAH4MY1EbqP7Gg2wJkoZvoCG4BYPsEG5lVBXPZn0UqXNz4y",
+    "sendAmount": "2100000000",
+    "payload": "b5ee9c7241010301008c000221a5a7cbf86c1e5528263110ef477359400801020019c442500f32213590000000000100cb80047f52f3231e3fce05b722017f087d0f8e02bd99a7348e43d36d7582e178099c6040023fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3020011fd4bcc8c78ff3816dc8805fc21f43e380af6669cd2390f4db5d60b85e02671c6402e6cf"
+   }
+  },
+  {
+   "recorded": "dry 2026-11-13",
+   "pair": "GRAM>USDT",
+   "protocols": "DeDustCPMMV2",
+   "routeSteps": [
+    "DeDustCPMMV2"
+   ],
+   "trader": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "dest": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "amountIn": "5000000000",
+   "minOut": "5582085",
+   "message": {
+    "targetAddress": "EQAH4MY1EbqP7Gg2wJkoZvoCG4BYPsEG5lVBXPZn0UqXNz4y",
+    "sendAmount": "5100000000",
+    "payload": "b5ee9c7241010301008d000223a5a7cbf8204693324d18b45d5012a05f200801020019c442500f3552d050000000000100cb80047f52f3231e3fce05b722017f087d0f8e02bd99a7348e43d36d7582e178099c6040023fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3020011fd4bcc8c78ff3816dc8805fc21f43e380af6669cd2390f4db5d60b85e02671c099d76cd"
+   }
+  },
+  {
+   "recorded": "dry 2026-11-13",
+   "pair": "USDT>GRAM",
+   "protocols": "StonFiV1",
+   "routeSteps": [
+    "StonFiV1"
+   ],
+   "trader": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "dest": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "amountIn": "50000000",
+   "minOut": "43820243650",
+   "message": {
+    "targetAddress": "EQAmJs8wtwK93thF78iD76RQKf9Z3v2sxM57iwpZZtdQAiVM",
+    "sendAmount": "185000000",
+    "payload": "b5ee9c724101020100aa0001b00f8a7ea5fb807104e9002c9f402faf080800ef3b9902a271b2a01c8938a523cfe24e71847aaeb6a620001ed44a77ac0e709d0008fea5e6463c7f9c0b6e4402fe10fa1f1c057b334e691c87a6daeb05c2f01338c81017df810100992593856180022a16a3164c4d5aa3133f3110ff10496e00ca8ac8abeffc5027e024d33480c3ea1467c7b5850008fea5e6463c7f9c0b6e4402fe10fa1f1c057b334e691c87a6daeb05c2f01338d0dfd5f142"
+   }
+  },
+  {
+   "recorded": "dry 2026-11-13",
+   "pair": "USDT>GRAM",
+   "protocols": "StonFiV1",
+   "routeSteps": [
+    "StonFiV1"
+   ],
+   "trader": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "dest": "0:23fa979918f1fe702db9100bf843e87c7015eccd39a4721e9b6bac170bc04ce3",
+   "amountIn": "500000000",
+   "minOut": "438117866612",
+   "message": {
+    "targetAddress": "EQAmJs8wtwK93thF78iD76RQKf9Z3v2sxM57iwpZZtdQAiVM",
+    "sendAmount": "185000000",
+    "payload": "b5ee9c724101020100aa0001b00f8a7ea54f6a2176167f75b741dcd6500800ef3b9902a271b2a01c8938a523cfe24e71847aaeb6a620001ed44a77ac0e709d0008fea5e6463c7f9c0b6e4402fe10fa1f1c057b334e691c87a6daeb05c2f01338c81017df810100992593856180022a16a3164c4d5aa3133f3110ff10496e00ca8ac8abeffc5027e024d33480c3eacc03b838e90008fea5e6463c7f9c0b6e4402fe10fa1f1c057b334e691c87a6daeb05c2f01338d0cc7565bf"
+   }
+  }
+ ]
+}

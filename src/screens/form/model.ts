@@ -11,7 +11,7 @@
 import type {RecipientCheck, SwapRecipient, SwapToken} from "../../contracts/domain";
 import type {PreviewRequest, QuoteRequest, RouteRejection, RouteSnapshot, RoutesRequest, RoutesState, WebRoute} from "../../contracts/routes";
 import type {WalletFamily} from "../../contracts/wallets";
-import {tonCallSigned} from "../../execute";
+import {omnistonSwapRouteSigned, tonCallSigned} from "../../execute";
 import {canPreview, routesKey, venueScope} from "../../swap";
 import {FAMILY_LABEL, agoLabel, plural, walletFamilyOf} from "../labels";
 
@@ -242,16 +242,56 @@ export function qrRefusal(route: WebRoute, payChainName: string): RouteRejection
   return null;
 }
 
+/** Omniston's names for TON DEXes (its quote's route steps), as the route list words them. */
+const TON_DEX_NAMES: Readonly<Record<string, string>> = {
+  StonFiV1: "STON.fi v1",
+  StonFiV2: "STON.fi v2",
+  DeDust: "DeDust v1",
+  DeDustCPMMV2: "DeDust CPMM v2",
+  TonCoV2: "TONCO",
+  SwapCoffee: "swap.coffee",
+};
+
+/**
+ * Why a TON wallet can't take Omniston's swap on TON (D35 part C): a pair other than TON ↔ USDT (`signed` false), or a
+ * quote whose route isn't one step through a DEX the gate pins — by the quote's own label, which only ever refuses here
+ * (a STON.fi v2 quote through another router than the pinned one is refused by the gate, at Confirm).
+ */
+function tonSwapRefusal(route: WebRoute, signed: boolean): RouteRejection | null {
+  if (!signed)
+    return {
+      provider: route.provider,
+      reason: "Only TON ↔ USDT swaps are signed here",
+      category: "setup",
+      detail: "From a TON wallet this app signs Omniston's swaps on TON only between TON and USDT, through a DEX contract it pins; other tokens aren't checked yet.",
+      raw: "app: an Omniston swap on TON between other tokens than TON and USDT, for which the app pins no DEX wallets",
+    };
+  const steps = route.tonSwapSteps ?? [];
+  if (omnistonSwapRouteSigned(steps)) return null;
+  const how = steps.length > 1 ? "in several hops" : steps.length === 1 ? `through ${TON_DEX_NAMES[steps[0]!] ?? "a DEX this app doesn't know"}` : "by a route its quote doesn't name";
+  return {
+    provider: route.provider,
+    reason: "Routed through a DEX that isn't pinned here",
+    category: "setup",
+    detail: `Omniston routes this swap ${how}. A TON wallet here signs a TON ↔ USDT swap only in one step through a DEX contract this app pins: STON.fi v1, STON.fi v2's TON/USDT router or DeDust v1.`,
+    raw: `app: Omniston's route (${steps.join("+").slice(0, 120) || "none"}) isn't one step through StonFiV1, StonFiV2 or DeDust, the DEXes whose contracts the app pins for TON ↔ USDT`,
+  };
+}
+
 /**
  * Why a TON wallet payer can't take a route: the wallet here signs deposits (TON, jettons) and the contract calls
  * execute checks byte for byte (D35, `tonCallSigned`: Symbiosis paid in USDT for a token it releases directly on an
- * EVM network, Omniston's escrow paid in USDT for a token on an EVM network), not other contract calls — Omniston's
- * TON → TON swaps, either venue from native TON or another jetton, Symbiosis to another destination (Tron, a token it
- * swaps to on arrival) — which are listed as refused, never offered. Without the token to receive (`to`) no call is
- * offered.
+ * EVM network, Omniston's escrow paid in USDT for a token on an EVM network, Omniston's swap between TON and USDT in
+ * one step through a DEX it pins), not other contract calls — Omniston's other TON swaps (other tokens, other DEXes,
+ * several hops), either venue's cross-chain call from native TON or another jetton, Symbiosis to another destination
+ * (Tron, a token it swaps to on arrival) — which are listed as refused, never offered. Without the token to receive
+ * (`to`) no call is offered.
  */
 export function tonWalletRefusal(route: WebRoute, from: Pick<SwapToken, "contract">, to: Pick<SwapToken, "caip2" | "contract"> | undefined): RouteRejection | null {
-  if (route.execution !== "calldata" || (to && tonCallSigned(route.provider, from.contract, to.caip2, to.contract))) return null;
+  if (route.execution !== "calldata") return null;
+  const signed = !!to && tonCallSigned(route.provider, from.contract, to.caip2, to.contract);
+  if (route.provider === "omniston" && to?.caip2 === "ton:-239") return tonSwapRefusal(route, signed);
+  if (signed) return null;
   return {
     provider: route.provider,
     reason: "TON contract calls aren't signed here yet",

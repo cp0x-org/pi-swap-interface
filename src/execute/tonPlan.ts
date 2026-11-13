@@ -2,17 +2,18 @@
  * checkPlanBrowser's TON rule (D10, D35): what a TON source may be before anything is armed. A deposit — TON to an
  * address, or a jetton transfer, with at most a text comment — and every address a mainnet one (EQ…/UQ… with its
  * checksum, or raw on workchain 0 / -1); never an approval. A contract payload (a cell body) only as a venue's TON
- * contract call listed in TON_CALLS — Symbiosis paid in USDT for a token it releases directly on an EVM network, and
- * Omniston's escrow paid in USDT for a token on an EVM network, today — and only when its exact BoC passes
- * tonGate.ts's checkTonCall: the app's own decode of the jetton transfer and of the venue's instruction, then the
- * venue package's verifier, all held to the reviewed route. A venue whose check is asynchronous (Omniston: the HTLC
- * secret this browser holds, its package's verifiers) is bound by `checkTonCallBinding` before anything is armed, and
- * again by the TON account right before the wallet is asked. A listed venue is paid by its contract call only, never
- * by a plain deposit. The message the wallet then signs is checked again in tonGate.ts.
+ * contract call listed in TON_CALLS — Symbiosis paid in USDT for a token it releases directly on an EVM network,
+ * Omniston's escrow paid in USDT for a token on an EVM network, and Omniston's swap between TON and USDT through a DEX
+ * contract the app pins, today — and only when its exact BoC passes tonGate.ts's checkTonCall: the app's own decode of
+ * the message and of the venue's instruction, then the venue package's verifier, all held to the reviewed route. A
+ * venue whose check is asynchronous (Omniston: the HTLC secret this browser holds, its package's verifiers) is bound by
+ * `checkTonCallBinding` before anything is armed, and again by the TON account right before the wallet is asked. A
+ * listed venue is paid by its contract call only, never by a plain deposit. The message the wallet then signs is
+ * checked again in tonGate.ts.
  *
  * No @ton/core here (the main bundle): the BoC is read by the TON chunk, which execute.ts hands in as `TonBodyCheck`;
- * a venue's instruction is read through the `Slice` that chunk hands over (a type only here); Omniston's binding is a
- * chunk of its own (omnistonEscrow.ts), loaded for that call only.
+ * a venue's instruction is read through the `Slice` that chunk hands over (a type only here); Omniston's bindings are
+ * chunks of their own (omnistonEscrow.ts, omnistonSwap.ts), loaded for that call only.
  */
 import type {Slice} from "@ton/core";
 import type {Swap2ExecutionPlan} from "@anywalletkit/protocol-swap2-core/swap2/base";
@@ -22,12 +23,13 @@ import {checkSymbiosisTonMessage, symbiosisRequest} from "@anywalletkit/protocol
 import {ccAssetByToken} from "@anywalletkit/swap2-assets";
 import {isAddressFor, toRawAddress} from "../catalog";
 import type {ReviewedSwap} from "../contracts/execution";
+import {TON_DEX_JETTON_IN, TON_DEX_NATIVE_IN, TON_USDT} from "./tonDexPins";
+import {OMNISTON_SWAP_PROTOCOLS, omnistonSwapInstruction, omnistonSwapServes} from "./tonSwap";
+
+export {TON_USDT} from "./tonDexPins";
 
 /** A TON mainnet address in a strict form (no test-only friendly address, no other workchain). */
 const mainnet = (a: string): boolean => isAddressFor("ton", a) && (!a.includes(":") || /^(-1|0):/.test(a));
-
-/** USDT's jetton master on TON (raw): the one jetton whose wallet code the app pins (tonGate.ts PINNED_JETTON_CODE). */
-export const TON_USDT = "0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe";
 
 /** A TON contract call's message: where it is sent, the TON it attaches, its cell body (a base64 BoC). */
 export interface TonCallMessage {
@@ -38,32 +40,43 @@ export interface TonCallMessage {
 
 /**
  * A venue's TON contract call (D35): a jetton transfer from the payer's own jetton wallet to the venue's contract,
- * whose forward payload is the venue's instruction to it. Everything here comes from the venue's package or the app.
+ * whose forward payload is the venue's instruction to it — or, where a rule names `native` contracts, the payer's TON
+ * sent to one of them with the instruction as the message's own body (part C). Everything here comes from the venue's
+ * package or the app.
  */
 interface TonCallRule {
-  /** The jetton masters (raw) it may be paid in, each with pinned wallet code. Never native TON. */
+  /** The jetton masters (raw) it may be paid in, each with pinned wallet code. */
   jettons: readonly string[];
-  /** The contracts (raw) its transfer may pay. */
-  destinations: readonly string[];
   /**
-   * The least TON its transfer forwards to that contract. TEP-74: a transfer forwarding none sends the contract no
-   * transfer_notification, and one too small can't pay for its work — the jettons sit with it, the instruction never runs.
+   * The contracts (raw) its transfer may pay, each with the least TON the transfer forwards there. TEP-74: a transfer
+   * forwarding none sends the contract no transfer_notification, and one too small can't pay for its work — the
+   * jettons sit with it, the instruction never runs.
    */
-  minForwardTon: bigint;
-  /** Whether its call paid in `jetton` (raw) for `destToken` on `destChain` (null = native) is one the checks here hold. */
-  serves(jetton: string, destChain: string, destToken: string | null): boolean;
+  destinations: ReadonlyMap<string, bigint>;
   /**
-   * The app's own read of the venue's instruction (the transfer's forward payload), against the reviewed route;
-   * `forwardTon`: what the transfer forwards to the venue's contract with it (checkTonCall read it).
+   * Native TON: the contracts (raw) the message itself may pay — the input, plus gas — each with the least TON it
+   * attaches beyond the input (with less the contract can't act on it). Absent: never paid in native TON.
    */
-  instruction(r: ReviewedSwap, s: Slice, forwardTon: bigint): string | null;
+  native?: ReadonlyMap<string, bigint>;
+  /**
+   * Whether its call paid in `source` (a raw jetton master; null = native TON) for `destToken` on `destChain` (null =
+   * native) is one the checks here hold.
+   */
+  serves(source: string | null, destChain: string, destToken: string | null): boolean;
+  /**
+   * The app's own read of the venue's instruction, against the reviewed route. A jetton source: the transfer's forward
+   * payload, `ton` what the transfer forwards with it, `contract` the destination it pays; native TON: the message's
+   * whole body, `ton` what it attaches beyond the input, `contract` the message's target (checkTonCall read and pinned
+   * both).
+   */
+  instruction(r: ReviewedSwap, s: Slice, ton: bigint, contract: string): string | null;
   /** The package's own check of the exact message, against the request rebuilt from the reviewed route (Symbiosis). */
   verify?(r: ReviewedSwap, msg: TonCallMessage): string | null;
   /**
    * What binds the call beyond its bytes, asynchronously: read before anything is armed (checkTonCallBinding) and
-   * again right before the wallet is asked (the TON account). Omniston: the HTLC secret this browser holds for the
-   * escrow's hashlock, its provider's own payload check, then its package's build verifier. A rule has `verify`,
-   * `bind` or both (a test holds every rule to it).
+   * again right before the wallet is asked (the TON account). Omniston's escrow: the HTLC secret this browser holds for
+   * the escrow's hashlock, its provider's own payload check, then its package's build verifier; Omniston's swap: its
+   * package's build verifier on the pins. A rule has `verify`, `bind` or both (a test holds every rule to it).
    */
   bind?(r: ReviewedSwap, msg: TonCallMessage): Promise<string | null>;
 }
@@ -273,34 +286,53 @@ function omnistonInstruction(r: ReviewedSwap, s: Slice, forwardTon: bigint): str
 }
 
 /**
- * Venue → its TON contract call. A venue missing here never gets a cell body signed from a TON wallet; each one comes
- * with its package's verifier, a decode of its instruction of the app's own, and tests of its own.
+ * Venue → its TON contract calls, at most one of them serving a route. A venue missing here never gets a cell body
+ * signed from a TON wallet; each call comes with its package's verifier, a decode of its instruction of the app's own,
+ * and tests of its own.
  */
-export const TON_CALLS: Readonly<Record<string, TonCallRule>> = {
-  // A jetton transfer to the pinned TON Portal carrying the bridge request. USDT, the jetton the package bridges; TON's
-  // native coin leaves through a partner exchange, which the package refuses. Only a token the Portal's pools release
-  // directly on an EVM network: the bridge request's fee is held to the reviewed minimum unit for unit.
-  symbiosis: {
-    jettons: [TON_USDT],
-    destinations: [SYMBIOSIS_TON_PORTAL_RAW],
-    minForwardTon: SYMBIOSIS_TON_FORWARD,
-    serves: (jetton, destChain, destToken) => symbiosisRelease(jetton, destChain, destToken) !== undefined,
-    instruction: symbiosisInstruction,
-    verify: symbiosisTonCall,
-  },
-  // A jetton transfer to the pinned rev2 Escrow Minter carrying the escrow order: an HTLC whose secret only this browser
-  // holds, disclosed after the delivery on the EVM network is proven (the package's trackIntent). USDT, the corridor's
-  // jetton; an escrow from native TON is refused, as the phone refuses it (nothing binds where native TON would go).
-  // TON → TON swaps (a DEX router named by TonAPI's label, no deadline checked) are no call here.
-  omniston: {
-    jettons: [TON_USDT],
-    destinations: [OMNISTON_TON_MINTER],
-    minForwardTon: OMNISTON_TON_FORWARD,
-    serves: (_jetton, destChain, destToken) => omnistonEscrowServes(destChain, destToken),
-    instruction: omnistonInstruction,
-    bind: async (r, msg) => (await import("./omnistonEscrow")).checkOmnistonEscrow(r, msg),
-  },
+export const TON_CALLS: Readonly<Record<string, readonly TonCallRule[]>> = {
+  symbiosis: [
+    // A jetton transfer to the pinned TON Portal carrying the bridge request. USDT, the jetton the package bridges;
+    // TON's native coin leaves through a partner exchange, which the package refuses. Only a token the Portal's pools
+    // release directly on an EVM network: the bridge request's fee is held to the reviewed minimum unit for unit.
+    {
+      jettons: [TON_USDT],
+      destinations: new Map([[SYMBIOSIS_TON_PORTAL_RAW, SYMBIOSIS_TON_FORWARD]]),
+      serves: (source, destChain, destToken) => source !== null && symbiosisRelease(source, destChain, destToken) !== undefined,
+      instruction: symbiosisInstruction,
+      verify: symbiosisTonCall,
+    },
+  ],
+  omniston: [
+    // A jetton transfer to the pinned rev2 Escrow Minter carrying the escrow order: an HTLC whose secret only this
+    // browser holds, disclosed after the delivery on the EVM network is proven (the package's trackIntent). USDT, the
+    // corridor's jetton; an escrow from native TON is refused, as the phone refuses it (nothing binds where native TON
+    // would go).
+    {
+      jettons: [TON_USDT],
+      destinations: new Map([[OMNISTON_TON_MINTER, OMNISTON_TON_FORWARD]]),
+      serves: (source, destChain, destToken) => source !== null && omnistonEscrowServes(destChain, destToken),
+      instruction: omnistonInstruction,
+      bind: async (r, msg) => (await import("./omnistonEscrow")).checkOmnistonEscrow(r, msg),
+    },
+    // A swap between TON and USDT on one of the DEX contracts the app pins (tonDexPins.ts: STON.fi v1, STON.fi v2's
+    // TON/USDT router, DeDust v1), never one TonAPI's label names: USDT by a jetton transfer to the router or DeDust's
+    // USDT vault, TON sent to the router's pTON wallet or DeDust's native vault. The pin it pays decides the layout
+    // read (tonSwap.ts); the package's verifier then runs with the review and those pins (omnistonSwap.ts).
+    {
+      jettons: [TON_USDT],
+      destinations: TON_DEX_JETTON_IN,
+      native: TON_DEX_NATIVE_IN,
+      serves: omnistonSwapServes,
+      instruction: omnistonSwapInstruction,
+      bind: async (r, msg) => (await import("./omnistonSwap")).checkOmnistonSwap(r, msg),
+    },
+  ],
 };
+
+/** The rule of `provider`'s that serves a call paid in `source` (raw; null = native TON) for `destToken` on `destChain`. */
+const ruleFor = (provider: string, source: string | null, destChain: string, destToken: string | null): TonCallRule | undefined =>
+  TON_CALLS[provider]?.find((x) => (source === null ? x.native !== undefined : x.jettons.includes(source)) && x.serves(source, destChain, destToken));
 
 /**
  * Is `provider`, paid in `contract` (a TON jetton in any spelling; null = native TON) for `destToken` on `destChain`
@@ -308,9 +340,16 @@ export const TON_CALLS: Readonly<Record<string, TonCallRule>> = {
  */
 export function tonCallSigned(provider: string, contract: string | null, destChain: string, destToken: string | null): boolean {
   const raw = contract === null ? null : toRawAddress(contract);
-  const rule = TON_CALLS[provider];
-  return !!raw && !!rule?.jettons.includes(raw) && rule.serves(raw, destChain, destToken);
+  return (contract === null || !!raw) && ruleFor(provider, raw, destChain, destToken) !== undefined;
 }
+
+/**
+ * Whether the DEX route an Omniston swap's quote names (its route steps' protocols, as the quote's `routeSteps` lists
+ * them) is one the gate could sign: one step, through a DEX pinned here. The route list refuses by it — never accepts
+ * by it: the gate decides by the contract the exact BoC pays (and STON.fi v2 is pinned for one router only).
+ */
+export const omnistonSwapRouteSigned = (steps: readonly string[] | undefined): boolean =>
+  steps?.length === 1 && OMNISTON_SWAP_PROTOCOLS.has(steps[0]!);
 
 /**
  * What the reviewed route fixes about its TON contract call — the expectation tonGate.ts's checkTonCall holds the exact
@@ -318,16 +357,21 @@ export function tonCallSigned(provider: string, contract: string | null, destCha
  */
 export interface TonCallExpected {
   provider: string;
-  /** The jetton master paid in, as the review named it (one with pinned wallet code). */
-  jetton: string;
-  /** The jettons the transfer moves: the reviewed input. */
+  /**
+   * The jetton master paid in, as the review named it (one with pinned wallet code); null: native TON, the message
+   * itself paying one of the venue's contracts.
+   */
+  jetton: string | null;
+  /** What the call moves: the reviewed input (jettons, or nanoTON beside the gas). */
   amount: bigint;
-  /** The contracts (raw) the transfer may pay: the venue's, from its package. */
-  destinations: readonly string[];
-  /** The least TON the transfer forwards to that contract (TON_CALLS). */
-  minForwardTon: bigint;
-  /** The app's own read of the venue's instruction (the forward payload; `forwardTon`, the TON sent with it), bound to the reviewed route. */
-  instruction(s: Slice, forwardTon: bigint): string | null;
+  /**
+   * The contracts (raw) the call may pay, from the venue's package or the app's pins: a jetton source — the transfer's
+   * destinations, each with the least TON forwarded there; native TON — the message's targets, each with the least TON
+   * attached beyond the input (TON_CALLS).
+   */
+  destinations: ReadonlyMap<string, bigint>;
+  /** The app's own read of the venue's instruction (`ton`, `contract`: TonCallRule `instruction`), bound to the reviewed route. */
+  instruction(s: Slice, ton: bigint, contract: string): string | null;
   /** The venue's own verifier on the same message (TON_CALLS), bound to the reviewed route; null when it has none synchronous. */
   verify(msg: TonCallMessage): string | null;
   /** The venue's asynchronous binding of the same message (TON_CALLS `bind`), bound to the reviewed route; null when it has none. */
@@ -336,15 +380,16 @@ export interface TonCallExpected {
 
 /** The reviewed route's TON contract call, or undefined when the route is none this app signs. */
 export function tonCallOf(r: ReviewedSwap): TonCallExpected | undefined {
-  const rule = TON_CALLS[r.provider];
-  if (!rule || r.fromChain !== "ton:-239" || !tonCallSigned(r.provider, r.fromContract, r.destChain, r.destToken)) return undefined;
+  const source = r.fromContract === null ? null : toRawAddress(r.fromContract);
+  if (r.fromChain !== "ton:-239" || (r.fromContract !== null && !source)) return undefined;
+  const rule = ruleFor(r.provider, source, r.destChain, r.destToken);
+  if (!rule) return undefined;
   return {
     provider: r.provider,
-    jetton: r.fromContract!,
+    jetton: r.fromContract,
     amount: r.amountIn,
-    destinations: rule.destinations,
-    minForwardTon: rule.minForwardTon,
-    instruction: (s, forwardTon) => rule.instruction(r, s, forwardTon),
+    destinations: source === null ? rule.native! : rule.destinations,
+    instruction: (s, ton, contract) => rule.instruction(r, s, ton, contract),
     verify: (msg) => rule.verify?.(r, msg) ?? null,
     bind: async (msg) => {
       if (!rule.bind) return null;
@@ -369,16 +414,26 @@ export interface TonBodyCheck {
   check(msg: TonCallMessage, call: TonCallExpected, self: string): string | null;
 }
 
+/**
+ * Why the reviewed route has no TON contract call of `rules`' (the venue's), in its own terms: no call of the venue's
+ * reaches its token to receive at all, or one does but not paid in this token (native TON, another jetton).
+ */
+function noCallFor(rules: readonly TonCallRule[], r: ReviewedSwap, source: string | null): string {
+  const sources = (x: TonCallRule): (string | null)[] => [...x.jettons, ...(x.native ? [null] : [])];
+  const reaching = rules.filter((x) => sources(x).some((src) => x.serves(src, r.destChain, r.destToken)));
+  if (!reaching.length) return "a TON contract call for a token this venue's call isn't checked for";
+  if (r.fromContract === null) return "a TON contract call paid in TON, which this venue's call isn't checked for";
+  if (!source || !reaching.some((x) => x.jettons.includes(source))) return "a TON contract call paid in a jetton this venue's call isn't checked for";
+  return "a TON contract call for a token this venue's call isn't checked for";
+}
+
 /** Why a cell-body source is not the reviewed route's TON contract call, or null. */
 function checkCellBody(plan: Swap2ExecutionPlan, r: ReviewedSwap, body: TonBodyCheck | undefined): string | null {
   const s = plan.source;
-  const rule = TON_CALLS[plan.provider];
-  if (s.kind !== "call" || !rule) return "a TON contract payload this app doesn't sign yet";
-  if (r.fromContract === null) return "a TON contract call paid in TON, which this venue's call isn't checked for";
-  const raw = toRawAddress(r.fromContract);
-  if (!raw || !rule.jettons.includes(raw)) return "a TON contract call paid in a jetton this venue's call isn't checked for";
+  const rules = TON_CALLS[plan.provider];
+  if (s.kind !== "call" || !rules) return "a TON contract payload this app doesn't sign yet";
   const call = tonCallOf(r);
-  if (!call) return "a TON contract call for a token this venue's call isn't checked for";
+  if (!call) return noCallFor(rules, r, r.fromContract === null ? null : toRawAddress(r.fromContract));
   if (s.data !== undefined || s.memo !== undefined || s.memoEncoding !== undefined || s.chainId !== undefined || s.gasLimit !== undefined)
     return "a payload this network doesn't carry";
   const boc = body?.boc();

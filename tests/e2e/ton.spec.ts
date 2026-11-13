@@ -24,6 +24,11 @@
  *   whose hashlock is the hash of the one secret IndexedDB holds for the quote; a build that forwards the minter too
  *   little TON, has the minter forward the escrow too little to deploy it, or refunds a failed creation to another
  *   wallet (each of which Omniston's package lets through) is refused before the wallet is asked.
+ * - Omniston's swap on TON (D35 part C): 2 TON → USDT, its WebSocket API answering with the SDK's recording of
+ *   2026-10-22 through DeDust v1 (tests/unit/execute/omnistonSwaps.fixture.json), TonAPI with what the package's own
+ *   build checks read. The route is offered (one step through a pinned DEX), and the one TON Connect request is DeDust's
+ *   pinned native vault, the input plus 0.1 TON and the exact recorded body; re-routed after the review through DeDust
+ *   CPMM v2 (its package's checks pass it; no pin names the pool), it is refused before the wallet is asked.
  */
 import {randomBytes} from "node:crypto";
 import {readFileSync} from "node:fs";
@@ -651,3 +656,142 @@ for (const [what, tamper, why] of [
     expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
   });
 }
+
+// ── a TON contract call: Omniston's swap between TON and USDT (D35 part C) ──────────────────────────────────────────
+
+/** The SDK's recordings of 2026-10-22 (omnistonSwaps.fixture.json): 2 TON → USDT, once through DeDust v1, once through DeDust CPMM v2. */
+const SWAPS = JSON.parse(readFileSync("tests/unit/execute/omnistonSwaps.fixture.json", "utf8")) as {
+  tonapi: Record<string, unknown>;
+  cases: {recorded: string; pair: string; protocols: string; trader: string; amountIn: string; quote?: Record<string, unknown> & {settlementData: {value: unknown}}; message: {targetAddress: string; sendAmount: string; payload: string}}[];
+};
+const swapCase = (protocols: string) => SWAPS.cases.find((c) => c.recorded.startsWith("sdk") && c.pair === "GRAM>USDT" && c.amountIn === "2000000000" && c.protocols === protocols)!;
+const DEDUST = swapCase("DeDust");
+const CPMM = swapCase("DeDustCPMMV2");
+/** The trader both were built for (and their recipient). */
+const SWAP_RAW = Address.parse(DEDUST.trader).toRawString();
+const OMN_BUILD_SWAP = "stonfi.omni.v1beta8.TonRpc.BuildSwap";
+/** DeDust v1's native vault, as TonAPI labels it for the package's own target check (the app never asks). */
+const DEDUST_VAULT = "EQDa4VOnTYlLvDJ0gZjNYm5PXfSmmtL6Vs6A_CZEtXCNICq_";
+
+/**
+ * Prices, TonAPI (the payer's TON; for the package's own build checks, DeDust's vault and pools as the SDK recorded
+ * them) and Omniston's WebSocket API (JSON-RPC: every RFQ answered with `state.quote`'s recording under a fresh id, the
+ * swap built as that recording was; `state.quote` switched after the review stands for Omniston changing its route);
+ * anything else off the page's origin is aborted and recorded.
+ */
+async function stubOmnistonSwap(page: Page, origin: string) {
+  const unexpected: string[] = [];
+  const methods: string[] = [];
+  const builds: {quoteId: string; owner: string; dest: string}[] = [];
+  const state = {quote: DEDUST};
+  await page.route(
+    (url) => url.origin !== origin,
+    async (route) => {
+      const url = new URL(route.request().url());
+      const json = (body: unknown) => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(body)});
+      if (url.hostname === "coins.llama.fi") return json({coins: {}});
+      if (url.hostname === "api.coingecko.com") return json({});
+      if (url.hostname === "tonapi.io") {
+        const recorded = SWAPS.tonapi[decodeURIComponent(url.pathname)];
+        if (recorded) return json(recorded);
+        if (url.pathname === `/v2/accounts/${DEDUST_VAULT}`) return json({address: Address.parse(DEDUST_VAULT).toRawString(), status: "active", interfaces: ["dedust_vault"], is_wallet: false});
+        if (url.pathname.endsWith("/jettons")) return json({balances: []});
+        return route.fulfill({status: 200, contentType: "application/json", body: `{"address":"${SWAP_RAW}","balance":10000000000,"status":"active"}`});
+      }
+      unexpected.push(url.href);
+      return route.abort("blockedbyclient");
+    },
+  );
+  await page.routeWebSocket(/^wss:\/\/omni-ws\.ston\.fi/, (ws) => {
+    let subscriptions = 0;
+    ws.onMessage((raw) => {
+      const m = JSON.parse(String(raw)) as {id?: number; method: string; params: Record<string, unknown>};
+      methods.push(m.method);
+      const reply = (result: unknown) => ws.send(JSON.stringify({jsonrpc: "2.0", id: m.id, result}));
+      const notify = (subscription: number, result: unknown) => ws.send(JSON.stringify({jsonrpc: "2.0", method: m.method, params: {subscription, result}}));
+      if (m.method === OMN_QUOTE) {
+        const sub = ++subscriptions;
+        reply(sub);
+        const rfqId = randomBytes(32).toString("hex");
+        const recorded = state.quote.quote!;
+        const quote = {...recorded, rfqId, quoteId: randomBytes(32).toString("hex"), quoteTimestamp: Math.floor(Date.now() / 1000), settlementData: undefined, swap: recorded.settlementData.value};
+        setTimeout(() => {
+          notify(sub, {ack: {rfq_id: rfqId}});
+          notify(sub, {quote_updated: omnistonJson(quote)});
+        }, 50);
+      } else if (m.method === OMN_BUILD_SWAP) {
+        const chain = (k: string) => String((m.params[k] as {ton?: unknown} | undefined)?.ton);
+        builds.push({quoteId: String(m.params.quote_id), owner: chain("transfer_src_address"), dest: chain("trader_dst_address")});
+        const sent = state.quote.message;
+        reply({messages: [{target_address: sent.targetAddress, send_amount: sent.sendAmount, payload: sent.payload}]});
+      } else if (m.method.endsWith(".Track")) {
+        reply(++subscriptions);
+      } else if (m.method.endsWith(".unsubscribe")) {
+        reply(true);
+      } else {
+        ws.send(JSON.stringify({jsonrpc: "2.0", id: m.id, error: {code: -32601, message: "not stubbed"}}));
+      }
+    });
+  });
+  return {unexpected, methods, builds, state};
+}
+
+/** Pay 2 TON from the fake Tonkeeper (the recordings' trader) for USDT on TON, to itself, at 1 % (as recorded); open the review. */
+async function reviewOmnistonSwap(page: Page) {
+  await page.goto(`./#/?pay=ton:native&receive=${USDT_TON}&amount=2`);
+  await page.getByTestId("swap-refund-connect").click();
+  await page.getByTestId("swap-connect-tonconnect:tonkeeper").click();
+  await expect(page.getByTestId("swap-wallet-pill-ton")).toBeVisible();
+  await page.getByTestId("swap-slippage").click();
+  const sheet = page.getByRole("dialog", {name: "Max slippage"});
+  await sheet.getByRole("group", {name: "Slippage presets"}).getByRole("button", {name: "1%", exact: true}).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByTestId("swap-review")).toHaveText("Review via Omniston", {timeout: 30_000});
+  await page.getByTestId("swap-review").click();
+  await expect(page.getByTestId("swap-confirm")).toBeEnabled({timeout: 30_000});
+}
+
+test("TON: Omniston swaps TON for USDT from a TON wallet through a pinned DEX — one message to DeDust's native vault, the input and gas, the exact recorded body", async ({page, baseURL}) => {
+  test.setTimeout(90_000);
+  const watch = watchPage(page);
+  const net = await stubOmnistonSwap(page, new URL(baseURL!).origin);
+  await injectFakeTonkeeper(page, SWAP_RAW);
+  await reviewOmnistonSwap(page);
+  await page.getByTestId("swap-confirm").click();
+
+  await expect.poll(() => tonSent(page), {timeout: 30_000}).toBe(1);
+  const [sent] = (await page.evaluate(() => (window as unknown as {__tonSent: unknown[]}).__tonSent)) as {method: string; params: string[]}[];
+  expect(sent!.method).toBe("sendTransaction");
+  const tx = JSON.parse(sent!.params[0]!) as {valid_until: number; network: string; from: string; messages: {address: string; amount: string; payload?: string; stateInit?: string}[]};
+  expect(tx).toMatchObject({network: "-239", from: SWAP_RAW});
+  expect(tx.messages).toEqual([{address: DEDUST_VAULT, amount: "2100000000", payload: Buffer.from(DEDUST.message.payload, "hex").toString("base64")}]);
+  expect(Address.parseFriendly(tx.messages[0]!.address).isBounceable).toBe(true);
+  expect(tx.valid_until - Date.now() / 1000).toBeLessThanOrEqual(300);
+  // Built for the connected wallet, paying itself.
+  expect(net.builds).toHaveLength(1);
+  expect([Address.parse(net.builds[0]!.owner).toRawString(), Address.parse(net.builds[0]!.dest).toRawString()]).toEqual([SWAP_RAW, SWAP_RAW]);
+
+  const hosts = new Set(watch.requests.map((u) => new URL(u).hostname));
+  for (const h of TON_HOSTS) expect(hosts.has(h), h).toBe(false);
+  expect(watch.requests.filter(toBridge), "a TON Connect bridge").toEqual([]);
+  expect(watch.requests.filter(isCp0xHost), "requests to a cp0x domain").toEqual([]);
+  expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
+});
+
+test("TON: an Omniston swap re-routed after the review through DeDust CPMM v2 (no pin names its pool) is refused before the wallet is asked", async ({page, baseURL}) => {
+  test.setTimeout(90_000);
+  const watch = watchPage(page);
+  const net = await stubOmnistonSwap(page, new URL(baseURL!).origin);
+  await injectFakeTonkeeper(page, SWAP_RAW);
+  await reviewOmnistonSwap(page);
+  // From now on Omniston quotes and builds the route through DeDust CPMM v2's pool: its package's checks pass it (TonAPI
+  // labels the pool), the route list would have refused it by its label, and the gate refuses its bytes.
+  net.state.quote = CPMM;
+  await page.getByTestId("swap-confirm").click();
+
+  await expect(page.getByTestId("swap-error")).toContainText("goes to a contract the app doesn't pin", {timeout: 30_000});
+  await expect(page.getByTestId("swap-error")).toContainText("nothing was signed");
+  expect(net.builds.length, "the swap built after Confirm").toBe(1);
+  expect(await tonSent(page)).toBe(0);
+  expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
+});

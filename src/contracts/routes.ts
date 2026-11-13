@@ -58,6 +58,12 @@ export interface WebRoute extends RouteView {
    * it. Absent when there is none, while the source's native coin is unpriced, or when `feeUsd` already lists it (LI.FI).
    */
   bridgeFeeUsd?: number;
+  /**
+   * An Omniston swap on TON: each step's DEX as its quote names it (`providerData.routeSteps`; a split step or more
+   * routes as the package words them, `[]` when unreadable). The route list refuses a TON wallet's swap by it — never
+   * accepts by it: execute decides by the contract the exact BoC pays (ARCHITECTURE D35 part C). Absent otherwise.
+   */
+  tonSwapSteps?: readonly string[];
 }
 
 /** The token being paid, for minimums a venue states in its base units (mobile routes.ts PaySide). */

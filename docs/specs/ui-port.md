@@ -1017,7 +1017,10 @@ RouteRow states (same frame as §2.2):
   `calldata` route is `refused` (category `setup`) with reason "TON contract calls aren't signed here yet", except a
   contract call execute checks byte for byte (`tonCallSigned`: Symbiosis paid in USDT for a token it releases directly
   on an EVM network — not Tron, nothing reached by a swap on arrival; Omniston's escrow paid in USDT for an ERC-20 on an
-  EVM network — not its TON → TON swaps, not a native coin), which is a `route`.
+  EVM network — not a native coin), which is a `route`. Omniston's swap on TON (D35 part C) is a `route` only between
+  TON and USDT (else reason "Only TON ↔ USDT swaps are signed here") whose quote's route is one step through a pinned
+  DEX (`tonSwapSteps` ⊂ StonFiV1 / StonFiV2 / DeDust, `omnistonSwapRouteSigned`; else "Routed through a DEX that isn't
+  pinned here", the detail naming the DEX — DeDust CPMM v2, TONCO, swap.coffee — or "several hops").
 - `updating` (web, D32): a `route` row whose route is held — same frame, key and place; the amount column and the
   meta line at opacity .45 (0.2 s; instant with reduced motion), `aria-busy="true"`, ", updating" at the end of its
   label. Still selectable. `outdated`: the same once no round runs (it failed, or a preview waits for its token),

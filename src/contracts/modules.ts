@@ -194,6 +194,11 @@ export interface ExecuteModule {
    * on `destChain` (null = native; D35).
    */
   tonCallSigned(provider: string, contract: string | null, destChain: string, destToken: string | null): boolean;
+  /**
+   * Whether an Omniston swap on TON whose quote names these route steps (WebRoute `tonSwapSteps`) could be signed: one
+   * step through a DEX pinned here (D35 part C). Only ever a reason to refuse; the gate decides by the BoC.
+   */
+  omnistonSwapRouteSigned(steps: readonly string[] | undefined): boolean;
 }
 
 /** src/activity/index.ts */

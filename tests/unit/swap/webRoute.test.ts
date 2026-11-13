@@ -59,6 +59,19 @@ describe("toWebRoute", () => {
     expect(executionOf({provider: "lifi"})).toBe("calldata");
     expect(executionOf({provider: "usdt0"})).toBe("calldata");
   });
+  it("names an Omniston swap's route steps (D35 part C), for the route list to refuse by; nothing for anything else", () => {
+    const steps = (routeSteps: unknown, settlement = "swap") => toWebRoute(q("omniston", "1", {providerData: {settlement, ...(routeSteps === undefined ? {} : {routeSteps: String(routeSteps)})}}));
+    expect(steps(JSON.stringify([{protocol: "StonFiV1", inputJetton: null, outputJetton: "EQCxE6mU"}])).tonSwapSteps).toEqual(["StonFiV1"]);
+    expect(steps(JSON.stringify([{protocol: "StonFiV2"}, {protocol: "StonFiV2"}])).tonSwapSteps).toEqual(["StonFiV2", "StonFiV2"]);
+    expect(steps(JSON.stringify([{protocol: "split(StonFiV2|DeDust)"}])).tonSwapSteps).toEqual(["split(StonFiV2|DeDust)"]);
+    // Unreadable or missing: no steps, so refused.
+    expect(steps("{not json").tonSwapSteps).toEqual([]);
+    expect(steps(undefined).tonSwapSteps).toEqual([]);
+    expect(steps(JSON.stringify({protocol: "StonFiV1"})).tonSwapSteps).toEqual([]);
+    // An escrow (an order), or another venue: no such field.
+    expect(steps(JSON.stringify([{protocol: "StonFiV1"}]), "escrow")).not.toHaveProperty("tonSwapSteps");
+    expect(toWebRoute(q("lifi", "1", {providerData: {settlement: "swap", routeSteps: "[]"}}))).not.toHaveProperty("tonSwapSteps");
+  });
   it("flags a memo and carries the venue's badge", () => {
     expect(toWebRoute(q("thorchain", "1", {depositMemo: "=:ETH.ETH:0xabc"}))).toMatchObject({hasMemo: true, trust: "own-node"});
     expect(toWebRoute(q("near_intents", "1", {depositMemo: null}))).toMatchObject({hasMemo: false, trust: "provider-api"});

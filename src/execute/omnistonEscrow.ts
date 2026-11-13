@@ -1,8 +1,9 @@
 /**
- * Omniston's escrow from a TON wallet, bound beyond its bytes (D35 part B): tonPlan.ts TON_CALLS.omniston's `bind`, a
- * chunk of its own (@ton/core and the Omniston package) loaded for that call only. It runs on the exact BoC checkTonCall
- * read — before anything is armed (execute.ts) and again right before the wallet is asked (accounts/ton.ts) — once the
- * app's own decode passed (the transfer; the escrow order's owner, destination, minimum and single keccak lock):
+ * Omniston's escrow from a TON wallet, bound beyond its bytes (D35 part B): the `bind` of tonPlan.ts's Omniston escrow
+ * rule, a chunk of its own (@ton/core and the Omniston package) loaded for that call only. It runs on the exact BoC
+ * checkTonCall read — before anything is armed (execute.ts) and again right before the wallet is asked
+ * (accounts/ton.ts) — once the app's own decode passed (the transfer; the escrow order's owner, destination, minimum and
+ * single keccak lock):
  *
  *   1. The build this page's Omniston provider made and checked (omnistonBuilds.ts): its validateTonEscrowPayload
  *      passed on these very bytes against the quote it cached. A body it didn't build and check is refused, and so is

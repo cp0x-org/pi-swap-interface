@@ -269,22 +269,25 @@ describe("which TON contract calls are signed: Omniston's escrow paid in USDT, t
     expect(tonCallSigned("omniston", TON_USDT, "eip155:56", BNB_USDC)).toBe(true);
     expect(tonCallSigned("omniston", null, "eip155:8453", BASE_USDC)).toBe(false);
     expect(tonCallSigned("omniston", "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f", "eip155:8453", BASE_USDC)).toBe(false);
-    // A TON → TON swap: a DEX router TonAPI's label names, no deadline checked — no call here.
-    expect(tonCallSigned("omniston", USDT, "ton:-239", null)).toBe(false);
+    // A TON → TON swap is another call (part C, omnistonSwap.test.ts): USDT for TON through a pinned DEX, never
+    // another token.
+    expect(tonCallSigned("omniston", USDT, "ton:-239", null)).toBe(true);
+    expect([...tonCallOf(reviewedOf({destChain: "ton:-239", destToken: "0x0000000000000000000000000000000000000000", recipient: SELF_UQ}))!.destinations.keys()]).not.toContain(OMNISTON_TON_MINTER);
     expect(tonCallSigned("omniston", USDT, "ton:-239", "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f")).toBe(false);
     // A native coin on arrival (Omniston's orders move tokens only), Tron, a network it doesn't settle on.
     expect(tonCallSigned("omniston", USDT, "eip155:8453", null)).toBe(false);
     expect(tonCallSigned("omniston", USDT, "tron:728126428", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")).toBe(false);
     expect(tonCallSigned("omniston", USDT, "eip155:10", "0x0b2c639c533813f4aa9d7837caf62653d097ff85")).toBe(false);
     expect(tonCallOf(reviewedOf({fromContract: null}))).toBeUndefined();
-    expect(tonCallOf(reviewedOf())).toMatchObject({provider: "omniston", jetton: USDT, amount: AMOUNT, destinations: [OMNISTON_TON_MINTER], minForwardTon: FORWARD});
+    expect(tonCallOf(reviewedOf())).toMatchObject({provider: "omniston", jetton: USDT, amount: AMOUNT});
+    expect(tonCallOf(reviewedOf())!.destinations).toEqual(new Map([[OMNISTON_TON_MINTER, FORWARD]]));
   });
 
   it("pays only the package's audited rev2 minter, pinned here: never rev1", () => {
     const audited = (AUDITED_OMNISTON_SETTLEMENT_CONTRACTS["ton:-239"] ?? []).map((a) => Address.parse(a).toRawString());
     expect(audited).toEqual([OMNISTON_TON_MINTER]);
     expect(Address.parse(MINTER).toRawString()).toBe(OMNISTON_TON_MINTER);
-    expect(TON_CALLS.omniston!.destinations).not.toContain(Address.parse(REV1_MINTER).toRawString());
+    for (const rule of TON_CALLS.omniston!) expect([...rule.destinations.keys(), ...(rule.native?.keys() ?? [])]).not.toContain(Address.parse(REV1_MINTER).toRawString());
   });
 
   it("every EVM network it may deliver on has an audited Omniston settlement contract", () => {
@@ -295,7 +298,7 @@ describe("which TON contract calls are signed: Omniston's escrow paid in USDT, t
   });
 
   it("every rule is checked by its package: a verifier, a binding or both; the payer's wallet is computed, never asked", () => {
-    for (const [name, rule] of Object.entries(TON_CALLS)) expect(!!rule.verify || !!rule.bind, name).toBe(true);
+    for (const [name, rules] of Object.entries(TON_CALLS)) for (const rule of rules) expect(!!rule.verify || !!rule.bind, name).toBe(true);
     expect(pinnedJettonWallet(USDT, SELF)).toBe(JW);
   });
 });
@@ -408,7 +411,7 @@ describe("the escrow's binding (omnistonEscrow.ts): the provider's build, this b
 
   it("passes the escrow its provider built and checked, locked to the secret IndexedDB holds", async () => {
     expect(await bind()).toBeNull();
-    expect(await TON_CALLS.omniston!.bind!(reviewedOf(), msgOf())).toBeNull();
+    expect(await TON_CALLS.omniston![0]!.bind!(reviewedOf(), msgOf())).toBeNull();
     expect(await callOf().bind(msgOf())).toBeNull();
   });
 

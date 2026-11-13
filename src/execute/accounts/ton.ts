@@ -17,9 +17,11 @@
  * that wallet, bounceable, the TON the write attaches, the write's BoC as its payload, byte for byte — goes through
  * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call, then through the call's
  * asynchronous binding (tonPlan.ts TON_CALLS `bind`; Omniston: the secret this browser holds for the escrow's
- * hashlock, its package's verifiers) on that same frozen request, right before the wallet is asked. An account built
- * for a contract call signs nothing else: no plain TON or jetton deposit (its venue never makes one; checkTonPlan
- * refuses one first).
+ * hashlock, its package's verifiers) on that same frozen request, right before the wallet is asked. A call paid in TON
+ * (D35 part C: Omniston's swap) names no jetton wallet: its message goes to the write's own target, which
+ * checkTonRequest's native-call kind holds to the call's pinned contracts, the rest as above. An account built for a
+ * contract call signs nothing else: no plain TON or jetton deposit (its venue never makes one; checkTonPlan refuses one
+ * first).
  *
  * Outcomes: TON Connect's error answer, or the SDK's own refusal before it hands the request over, is `answered`
  * (nothing was sent), and so is any failure before an installed wallet (JS bridge) got the request. TON Connect's
@@ -145,7 +147,7 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
     Object.freeze(req);
     const why =
       checkTonRequest(req, exp, {self: self!, now: now()}) ??
-      (exp.kind === "jetton-call" ? await exp.call.bind({to: req.messages[0]!.address, value: exp.value, bodyBoc: exp.bodyBoc}) : null);
+      (exp.kind === "jetton-call" || exp.kind === "native-call" ? await exp.call.bind({to: req.messages[0]!.address, value: exp.value, bodyBoc: exp.bodyBoc}) : null);
     if (why) throw new SwapGateRefusal(`The TON message didn't match the reviewed route (${why}) — it was refused before signing.`);
     const acct = signer.sender.account;
     if (!acct || mainnetRaw(acct.address) !== self || acct.chain !== TON_NETWORK)
@@ -203,8 +205,8 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
     chain: "ton:-239",
     getAddress: async () => signer.address,
     async getJettonWalletAddress(token) {
-      // Only the reviewed call's jetton: any other is refused before TonAPI is asked.
-      if (!call || mainnetRaw(token) === null || mainnetRaw(token) !== mainnetRaw(call.jetton)) throw unsigned();
+      // Only the reviewed call's jetton (a call paid in TON has none): any other is refused before TonAPI is asked.
+      if (!call?.jetton || mainnetRaw(token) === null || mainnetRaw(token) !== mainnetRaw(call.jetton)) throw unsigned();
       return jettonWallet(call.jetton, call.amount);
     },
     async sendTransaction(tx) {
@@ -214,8 +216,10 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
         if (!call || tx.body !== undefined || typeof tx.bodyBoc !== "string" || !tx.bodyBoc) throw unsigned();
         const address = messageAddress(tx.to);
         if (!address || typeof tx.value !== "bigint" || tx.value <= 0n) throw refusal("This TON contract call is malformed — nothing was sent.");
-        const jw = await jettonWallet(call.jetton, call.amount);
         const req = request({address, amount: tx.value.toString(), payload: tx.bodyBoc});
+        // Paid in TON: no jetton wallet — the message's target is the venue's pinned contract (checkTonRequest).
+        if (call.jetton === null) return send(req, {kind: "native-call", to: tx.to, value: tx.value, bodyBoc: tx.bodyBoc, call});
+        const jw = await jettonWallet(call.jetton, call.amount);
         return send(req, {kind: "jetton-call", jettonWallet: jw, value: tx.value, bodyBoc: tx.bodyBoc, call});
       }
       if (call) throw callOnly();

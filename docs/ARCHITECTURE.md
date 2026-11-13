@@ -182,7 +182,7 @@ chunk, needs IndexedDB, opens its WebSocket on the first quote; 0.5.5 trusts the
 quotes name) defaulted off until
 the owner turned them on (2026-11-12), as cp0x's server runs them: USDT Ethereum → Tron showed fewer routes than the
 wallet. A Symbiosis TON source is a jetton transfer carrying its bridge request, an Omniston TON source one carrying
-its escrow order (TON contract calls, D35), so `executionOf` reads them as signed, never a deposit address. Omniston is off (uncounted) until its chunk is in, and a
+its escrow order or a DEX swap (TON contract calls, D35), so `executionOf` reads them as signed, never a deposit address. Omniston is off (uncounted) until its chunk is in, and a
 round waits up to 2 s for it (`LAZY_WAIT_MS`); between networks it is asked for tokens only (its SDK refuses a native
 leg locally); on an IPFS path gateway it stays off unless the page's operator layer turns it on (its HTLC secret
 would sit in storage every site there shares). An operator's layer or a viewer's Settings can still switch any venue
@@ -358,7 +358,8 @@ balance; a jetton without pinned code is refused, so only USDT is sent today), 0
 body whose amount, recipient, excess address (the payer), forward amount and comment are exactly the reviewed ones;
 for a contract call (D35), that same proven wallet, bounceable, the TON the write attaches (≤ 0.5 TON) and the armed
 BoC itself, read again against the reviewed call, then bound again (Omniston's escrow: the secret this browser holds,
-its package's checks; D35 part B).
+its package's checks; D35 part B); for a call paid in TON (Omniston's swap, part C), the write's own target — a DEX
+contract the app pins — the input plus at most 0.5 TON, the armed BoC, read and bound the same way.
 TON Connect's error answer, the SDK's refusal before it hands the request over, or a failure before an installed
 wallet (JS bridge) got it, is `answered`; on TON Connect's HTTP bridge (which confirms a request only once its POST
 was answered, retrying until then) any other failure or silence is maybe-sent, as is a lost answer after the wallet
@@ -483,10 +484,13 @@ allows that file to name its page's origin and nothing else). `getSigner("ton:-2
 connector as `TonSender`, raw and friendly address, `tonApiUrl`). TON balances come from TonAPI
 (`catalog/balances/ton.ts`), asked only for a connected TON wallet. A TON contract call (a jetton transfer whose
 forward payload is the venue's instruction, a cell body) is signed only as D35 lists it — Symbiosis paid in USDT for
-a token it releases directly on an EVM network, Omniston's escrow paid in USDT for a token on an EVM network (part B);
-Omniston's TON → TON swaps, either venue from native TON or another jetton, and Symbiosis to Tron or to a token
-reached by a swap on arrival are not wired: `checkTonPlan` refuses their cell bodies and the route list lists such
-routes as refused for a TON wallet ("TON contract calls aren't signed here yet").
+a token it releases directly on an EVM network, Omniston's escrow paid in USDT for a token on an EVM network (part B),
+Omniston's swap between TON and USDT in one step through a DEX contract the app pins (part C: STON.fi v1, STON.fi v2's
+TON/USDT router, DeDust v1; TON itself then sent to the DEX); Omniston's other TON swaps (other tokens, DeDust CPMM v2,
+TONCO, swap.coffee, other STON.fi v2 routers, several hops), a cross-chain call from native TON or another jetton,
+and Symbiosis to Tron or to a token reached by a swap on arrival are not wired: `checkTonPlan` refuses their cell
+bodies and the route list lists such routes as refused for a TON wallet ("TON contract calls aren't signed here yet",
+"Only TON ↔ USDT swaps are signed here", "Routed through a DEX that isn't pinned here").
 
 **D12 — EVM engine account.** engine.md §6.1 as written: reads, gas quotes and `eth_call` simulation through
 `WalletAccountReadOnlyEvm` over the runtime RPC list; writes through the viem `WalletClient`; `getChainId()` from
@@ -1120,7 +1124,8 @@ daily cron (its `docs/swap-web-proxy.md` §8): per-UTC-day counts of venue × di
 
 **D35 — TON contract calls (owner, 2026-11-13).** From a TON wallet Omniston and Symbiosis aren't paid by a deposit:
 the wallet sends one jetton transfer from the payer's own USDT jetton wallet whose forward payload is the venue's
-instruction to its contract — a cell body (Symbiosis' bridge request, Omniston's escrow order). `checkTonPlan` refused
+instruction to its contract — a cell body (Symbiosis' bridge request, Omniston's escrow order, a DEX's swap) — or, for
+Omniston's swap from TON itself, the TON straight to the DEX with the swap as its body (part C). `checkTonPlan` refused
 every cell body and the route list every such route for a TON wallet. They are enabled one venue at a time, each only
 once the EXACT BoC the wallet will sign passes the app's own decode AND the venue package's verifier, with every
 expectation taken from the reviewed route, never from the quote; no existing check is loosened, every new path adds
@@ -1302,6 +1307,124 @@ trusting the engine's summary (which skips a custom payload and doesn't read the
     Connect request is the jetton wallet, 0.4 TON and that escrow, the page's IndexedDB holding the one secret whose
     hash locks it; a build forwarding the minter 1 nanoTON, having it forward the escrow 1 nanoTON, or refunding a
     failed creation to another wallet is refused before the wallet is asked.
+- **Part C — Omniston's swap between TON and USDT on TON (owner, 2026-11-14).** Omniston builds a swap on TON as one
+  message from the payer (`tonBuildSwap`): USDT in, a jetton transfer from the payer's USDT wallet to the DEX — a
+  STON.fi router, DeDust's USDT vault — carrying the DEX's swap; TON in, the input plus gas sent straight to the DEX —
+  a STON.fi router's pTON wallet, DeDust's native vault — with the swap as the message's own body. Its package and the
+  phone know which DEX is real only by TonAPI's code-interface labels and its get-methods, and a label can't say which
+  instance a contract is (STON.fi v2 routers are deployed by anyone with the genuine code, its admin then holding a
+  7-day code upgrade; DeDust CPMM v2 pools are permissionless, with a creator's own fees and resolvers); for TON in,
+  nothing pins the target at all (the package's `callTargets` are empty; the engine binds it by value only). So the
+  web pins the DEXes by address and reads every field of the swap itself, and nothing at run time comes from TonAPI,
+  an indexer or Omniston's labels.
+  - *Pins* (`tonDexPins.ts`, the main bundle, strings only; each with its source in a comment). STON.fi v1: the router
+    EQB3ncyB… (ston-fi/sdk `dex/v1/constants.ts`, api.ston.fi/v1/routers), its pTON v1 wallet EQARULUY… (the routers
+    API; on chain owner = the router, master = pTON v1), its USDT wallet derived from USDT's pinned wallet code.
+    STON.fi v2: the one router holding the liquid TON/USDT pool, EQCS4UEa… (v2.2; api.ston.fi/v1/routers and
+    pools/by_market — of 50 v2 routers listed, the only other TON/USDT pools are dust), its pTON v2 wallet EQCSIMGB…,
+    its USDT wallet derived. DeDust v1: what its factory EQBfBWT7… (docs.dedust.io, dedust-io/sdk) derives — the native
+    vault EQDa4VOn…, the USDT vault EQAYqo4u…, the TON/USDT volatile pool EQA-X_yo…. Each address and code hash read
+    once, read-only, on 2026-11-13; refreshed by hand at a release (the routers API, pTON wallets' get_wallet_data,
+    the factory getters, USDT's get_wallet_address against the derivation), never at run time: a DEX's new contract is
+    refused until it is pinned. The entry floors are every recording's: USDT forwarded to STON.fi v1 0.135, v2 0.21,
+    DeDust 0.1 TON; TON beyond the input to STON.fi v1 0.1, v2 0.22, DeDust 0.1 TON.
+  - *Venue rule.* `TON_CALLS` is now venue → its calls (at most one serving a route; `tonCallOf` and `tonCallSigned`
+    pick it, `checkCellBody` names why none does in the same words as before). A rule's `destinations` carry each
+    contract's least forward (Symbiosis' 0.05 and the escrow's 0.3 TON unchanged), and a rule may name `native`
+    contracts: TON sent to one of them, each with the least gas beyond the input; absent, never paid in TON (Symbiosis,
+    the escrow). Omniston's second rule: paid in USDT or TON, for the other of the two on TON only
+    (`omnistonSwapServes`), entering at the pins above, its instruction `omnistonSwapInstruction` (tonSwap.ts), bound by
+    `omnistonSwap.ts`.
+  - *The app's own decode.* `checkTonCall` gained a TON-in branch (the jetton branch is unchanged but for the
+    per-contract floor): bounceable to a pinned entry, the reviewed input plus at least that entry's floor and at most
+    0.5 TON (`TON_BODY_GAS`; checkPlan already caps a TON cell body at the input plus that), one ordinary root; then the
+    instruction reader, told the TON that comes with it and the contract it goes to — the pin decides the layout,
+    never the quote's label (tonSwap.ts). STON.fi v1: USDT in, swap#25938561 forwarded to the router; TON in, a
+    TEP-74 transfer of exactly the input to the pTON wallet's own router, excess to the payer, no custom payload,
+    forwarding at least 0.1 TON and no more than the gas, carrying that swap in a reference. The swap: the router's
+    wallet of the reviewed output (its pinned USDT wallet, or its pTON wallet for TON), the minimum ≥ the reviewed one,
+    the reviewed recipient, no referral. STON.fi v2: USDT in, swap#6664de2a forwarded to the router; TON in,
+    ton_transfer#01f3835d of exactly the input refunding the payer, the swap in a reference. The swap: the router's
+    wallet of the reviewed output, refund and excess to the payer, the deadline (below), then the minimum, the
+    recipient, no chained swap (forward gas 0, no custom payload), no refund payload or its gas, no referral (fee 0
+    AND no address — the package lets a zero-fee referral at any address through). DeDust v1: USDT in, swap#e3a0d482
+    forwarded to the USDT vault; TON in, swap#ea06185d of exactly the input to the native vault. The step: the pinned
+    TON/USDT pool, a given input, the minimum, no next step; its params: the deadline, the recipient, no referral, no
+    payload for the recipient, and back to the payer on a refund either nothing or what every build carries (op
+    0x3c37d7e9, the payer twice — undocumented, delivered only to the payer). The recipient always named explicitly
+    (never addr_none, "the sender"); every cell read to its end.
+  - *The deadline.* Omniston sets none and can't: its build request has no deadline field (@ston-fi/omniston-sdk
+    0.8.12 `BuildTonSwapRequest`); it sends STON.fi v2's tx_deadline as 2^32 − 1 and DeDust's as 0 (no deadline; 7 of
+    8 recent CPMM v2 swaps with 0 paid out), and STON.fi v1 has no field. Requiring one would enable nothing. What
+    bounds when the swap can run is the TON Connect request itself — at most 5 minutes (`checkTonRequest`), which the
+    wallet signs as its message's own expiry, so the signed message can't be included later — with the on-chain
+    minimum at least the reviewed one whenever it runs, and the write armed once. The reader decodes each deadline and
+    passes only Omniston's "none" as recorded or a real deadline in the next 20 minutes (`OMNISTON_SWAP_DEADLINE_S`).
+  - *Bound beyond its bytes* (`omnistonSwap.ts`, a chunk of its own, the rule's `bind`): the package's build verifier
+    `omnistonVerifyBuild` — its `checkTonSwapPayload` (the layout, amount, recipient, refund and excess, the minimum,
+    referral, cells to their end), then the DEX target and the chain facts the body depends on — on the exact BoC,
+    with the quote and request rebuilt from the review (amount, minimum, payer, recipient, tokens), the route ONE step
+    through the DEX whose pin the message pays (never the quote's route steps or protocols), and its two chain-fact
+    hooks answered by the pins, not TonAPI: `validateTonSwapTarget` (that very contract, for that DEX),
+    `validateTonSwapLeg` (the router, its pTON wallet and the wallet it is asked for, or the pool, the pinned ones for
+    the reviewed pair); no integrator. It runs before anything is armed and again right before the wallet, as the
+    escrow's does. The provider's own build checks (TonAPI-backed, in `buildDeposit`) still run first; they can only
+    refuse.
+  - *Account and message.* A call paid in TON names no jetton wallet: `getJettonWalletAddress` refuses it, and
+    `sendTransaction({to, value, bodyBoc})` sends the write's own target — checkTonRequest's new `native-call` kind
+    holds it to the envelope, that target (bounceable), the exact TON amount and the armed BoC, then `checkTonCall`
+    again; a `jetton-call` and a `native-call` are each refused for the other kind of call. The jetton-call kind
+    serves USDT in, unchanged.
+  - *Route list.* `toWebRoute` keeps an Omniston swap's route steps (`tonSwapSteps`, its quote's `routeSteps`
+    protocols). For a TON wallet, `tonWalletRefusal` offers Omniston's swap on TON only for TON ↔ USDT
+    (`tonCallSigned`, else "Only TON ↔ USDT swaps are signed here") whose quote names one step through StonFiV1,
+    StonFiV2 or DeDust (`omnistonSwapRouteSigned`, else "Routed through a DEX that isn't pinned here", the detail naming
+    the DEX or "several hops"). That label only ever refuses: the gate decides by the contract the exact BoC pays, so a
+    live quote re-routed after the review (Omniston answered TON → USDT through DeDust CPMM v2 on 2026-11-13), or a
+    STON.fi v2 route through another router than the pinned one, is refused at Confirm, nothing signed.
+  - *Not enabled, and what would unblock it.* DeDust CPMM v2 (what Omniston quotes TON → USDT through today): its
+    TON/USDT pool EQAH4MY1… is vouched for only by its code (a library cell equal to dedust-io/kit `PoolV2.LIBRARY_HASH`)
+    and Omniston's builds — no DeDust address list or factory names the canonical pool, and pools are permissionless —
+    so it waits for DeDust (or the SDK) to publish its canonical pools, or for the owner to accept code-plus-chain
+    provenance; from USDT no build is recorded at all. STON.fi's other v2 routers: a published allowlist. TONCO and
+    swap.coffee: no decoder in the package (it refuses to build them). Several hops: per-hop pins and decode. Any other
+    jetton: its wallet code pinned (an ask wallet derived) and its pools. The route list reads these as refused.
+  - *Still trusted*: the DEX contracts and their admins (STON.fi v2's 7-day code-upgrade timelock; DeDust's
+    upgradeability undocumented); Omniston's price, bounded by the reviewed minimum on chain; what DeDust's refund note
+    means; the gas, at most 0.5 TON (0.1–0.26 TON in every recording), the excess refunded; a refund's path (STON.fi v1
+    and DeDust refund the sender — the payer, the only sender here). Hardening for the SDK's owner: pin the DEX
+    instances (TON `callTargets` in `omnistonPins`, router and pool pins in the validators) instead of TonAPI labels;
+    bound deadlines; refuse a zero-fee referral at another address; read DeDust's fulfill/reject payloads, CPMM v2's
+    payout extras and STON.fi v2's refund forward gas instead of skipping them. No TON → TON swap has been signed from
+    the web live yet.
+  - *Tests.* `tests/unit/execute/omnistonSwap.test.ts` over `omnistonSwaps.fixture.json` — every TON ↔ USDT build
+    recorded: the SDK's of 2026-10-22 and the read-only dry builds of 2026-11-13 (12 through a pinned DEX: STON.fi v1,
+    v2 and DeDust v1 both ways; 3 through DeDust CPMM v2, 1 through swap.coffee, 1 to USDe through another v2 router,
+    all refused): the pins against their friendly forms, the derivation, every recording, the package's protocol names
+    and pTON masters, the recorded floors; the rewriters re-encoding every body cell for cell; at the plan, per DEX and
+    direction, every field — the envelope (target, bounce, gas 0 / under the floor / past 0.5 TON, another DEX's entry
+    carrying this body), the transfer (op, amount, destination, an unpinned or wrong-role contract, excess, custom
+    payload, forward, inline, trailing), pTON v1's transfer (op, amount, router, excess, custom payload, forward past
+    the gas or under 0.1 TON), pTON v2's (op, amount, refund), the swap (op, ask wallet — another, the other output's,
+    another router's — minimum, recipient or none, referral fee or address, chained swap, refund payload or its gas,
+    deadline past, too far, 0 or near-max, a real one in 20 minutes passing; DeDust's pool, kind, limit, next step,
+    deadline, recipient, referral, payloads, its refund note's op, addresses or tail), and the review's recipient,
+    minimum, amount and payer; the binding (all pass with no network; the review's side; legs and targets off the
+    pins; what the package reads, and what only the app's decode holds — a day-away deadline, a zero-fee referral,
+    refund gas, DeDust's payloads — which flips once the package binds them); checkPlanBrowser and the binding as arm
+    runs them; the TON Connect message (native-call and jetton-call, each refused as the other); the account (TON in:
+    no jetton wallet asked, one message to the pin; USDT in: the proven wallet); and the real engine and the real
+    Omniston provider (`lazyOmniston` → `buildOmniston`, its WebSocket client replaced, TonAPI's answers to its own
+    checks replaced by yes) through executeSwap to a fake TON Connect wallet — one request for each recording that
+    carries its quote (every DEX and direction but STON.fi v1 from USDT, a dry build), the recorded message exactly; eight builds the provider passes refused before the wallet (DeDust CPMM v2, another ask
+    wallet, a zero-fee referral, a day-away deadline, refund gas, a recipient payload, another target, 0.6 TON of gas
+    quoted). The escrow's and Symbiosis' tests run unchanged but for the rule's new shape (`TON_CALLS` lists,
+    per-contract floors). `tests/unit/screens/model.test.ts` and `tests/unit/swap/webRoute.test.ts`: the route list
+    offers TON ↔ USDT through each pinned DEX and refuses DeDust CPMM v2, TONCO, swap.coffee, two hops, a split, no
+    steps, any other pair. `tests/e2e/ton.spec.ts`: a fake Tonkeeper swaps 2 TON for USDT through Omniston's stubbed
+    WebSocket API (the SDK's DeDust v1 recording; TonAPI with what the package's own checks read) — the one request is
+    DeDust's pinned native vault, 2.1 TON and the exact recorded body — and the same swap re-routed after the review
+    through DeDust CPMM v2 is refused before the wallet is asked.
 
 ---
 
@@ -1527,6 +1650,10 @@ files, conformance green, your tests pass (report exact counts), no new dependen
     wait at load (then Public) or one failed call per venue (then direct); its per-IP windows and daily budgets are
     advisory like D29, and a spent one sends that venue direct until 00:00 UTC. It never decides what is signed: a
     dishonest answer is refused by the same in-browser checks as a dishonest venue.
+13. Omniston's swaps on TON (D35 part C) go only through the DEX contracts pinned in `tonDexPins.ts`, refreshed by
+    hand at a release: a DEX that moves its liquidity (a new STON.fi router or pool, DeDust's CPMM v2, which Omniston
+    quotes TON → USDT through today) reads as refused until it is re-pinned; the DEXes' admins (STON.fi v2's 7-day code
+    upgrade) stay trusted.
 
 ---
 

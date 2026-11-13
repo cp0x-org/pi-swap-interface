@@ -12,13 +12,16 @@
  *     the fixed gas, and a transfer body whose amount, recipient, excess address (the payer), forward amount and
  *     comment are exactly the reviewed ones — no custom payload, no trailing data; jetton-call (D35): the payer's own
  *     jetton wallet, bounceable, exactly the TON the write attaches, the armed BoC itself as the payload, and that BoC
- *     through `checkTonCall` again (the account then awaits the call's binding on the same frozen request).
- *   - `checkTonCall` (D35): a venue's contract call, read here from its exact BoC — the payer's own jetton wallet,
- *     at most TON_BODY_GAS attached, a TEP-74 transfer of exactly the reviewed amount to one of the venue's pinned
- *     contracts, excess to the payer, no custom payload, less TON forwarded than attached but at least the venue's
- *     floor, the venue's instruction in a reference and nothing after it, that instruction through the venue rule's
- *     own reader (tonPlan.ts TON_CALLS; it is told the TON forwarded with it) — then the venue package's own verifier
- *     on the same message, where it has a synchronous one.
+ *     through `checkTonCall` again (the account then awaits the call's binding on the same frozen request);
+ *     native-call (D35 part C): the same for a call paid in TON, sent to the write's own target.
+ *   - `checkTonCall` (D35): a venue's contract call, read here from its exact BoC. Paid in a jetton: the payer's own
+ *     jetton wallet, at most TON_BODY_GAS attached, a TEP-74 transfer of exactly the reviewed amount to one of the
+ *     venue's pinned contracts, excess to the payer, no custom payload, less TON forwarded than attached but at least
+ *     that contract's floor, the venue's instruction in a reference and nothing after it. Paid in TON (part C): sent
+ *     bounceable to one of the venue's pinned contracts, the reviewed amount plus at least that contract's floor and at
+ *     most TON_BODY_GAS, one ordinary root. Then that instruction through the venue rule's own reader (tonPlan.ts
+ *     TON_CALLS; it is told the TON that comes with it and the contract it goes to), then the venue package's own
+ *     verifier on the same message, where it has a synchronous one.
  *   - `pinnedJettonWallet`: the payer's USDT jetton wallet computed here from the jetton's pinned wallet code, so a
  *     public API's answer for it is checked, not trusted.
  *   - `captureTonBody`: the engine's `decodeTonBody` for one TON execution, which keeps the BoC it is handed.
@@ -116,7 +119,9 @@ export type TonExpected =
    * A venue's contract call (D35): `jettonWallet` as above, `value` the TON the write attaches, `bodyBoc` the armed BoC
    * the write carries, `call` what the reviewed route fixes about the transfer.
    */
-  | {kind: "jetton-call"; jettonWallet: string; value: bigint; bodyBoc: string; call: TonCallExpected};
+  | {kind: "jetton-call"; jettonWallet: string; value: bigint; bodyBoc: string; call: TonCallExpected}
+  /** A venue's contract call paid in TON (D35 part C): `to` the write's target, the rest as for jetton-call. */
+  | {kind: "native-call"; to: string; value: bigint; bodyBoc: string; call: TonCallExpected};
 
 /** One BoC with one ordinary root cell, or null. */
 function oneCell(boc: unknown): Cell | null {
@@ -178,8 +183,11 @@ export function checkTonRequest(req: TonConnectRequest, exp: TonExpected, ctx: {
   const payload = m.payload === undefined ? null : oneCell(m.payload);
   if (m.payload !== undefined && !payload) return "the message payload can't be read";
 
-  if (exp.kind === "jetton-call") {
-    if (to.raw !== mainnetRaw(exp.jettonWallet) || !to.bounceable) return "the message isn't sent to your own jetton wallet";
+  if (exp.kind === "jetton-call" || exp.kind === "native-call") {
+    // A call paid in TON is a native-call, one paid in a jetton a jetton-call: never the one read as the other.
+    if ((exp.kind === "native-call") !== (exp.call.jetton === null)) return "the message isn't the reviewed call";
+    if (exp.kind === "jetton-call" && (to.raw !== mainnetRaw(exp.jettonWallet) || !to.bounceable)) return "the message isn't sent to your own jetton wallet";
+    if (exp.kind === "native-call" && (m.address !== messageAddress(exp.to) || !to.bounceable)) return "the message goes to another contract than the reviewed call's";
     if (amount !== exp.value) return "the message attaches another TON amount than the reviewed one";
     if (!payload || m.payload === undefined) return "the contract call's body is missing";
     // The armed BoC itself: the same bytes, so the same cell (its hash) — what the plan check read is what is signed.
@@ -206,27 +214,29 @@ export function checkTonRequest(req: TonConnectRequest, exp: TonExpected, ctx: {
 function checkCallBody(body: Cell, call: TonCallExpected, value: bigint, self: string): string | null {
   let instruction: Cell;
   let forward: bigint;
+  let destination: string | null;
   try {
     const s = body.beginParse();
     if (s.loadUint(32) !== JETTON_TRANSFER_OP) return "the contract call is not a jetton transfer";
     s.loadUintBig(64); // query id: any
     if (s.loadCoins() !== call.amount) return "the jetton amount isn't the reviewed one";
-    const destination = addressOf(s);
-    if (destination === null || !call.destinations.includes(destination)) return "the jettons go to a contract the app doesn't pin for this venue";
+    destination = addressOf(s);
+    const floor = destination === null ? undefined : call.destinations.get(destination);
+    if (floor === undefined) return "the jettons go to a contract the app doesn't pin for this venue";
     if (addressOf(s) !== self) return "the transfer's excess goes to another wallet";
     // Refused, not skipped: a custom payload is acted on by the payer's own jetton wallet.
     if (s.loadBit()) return "the transfer carries a custom payload";
     forward = s.loadCoins();
     if (forward >= value) return "the transfer forwards as much TON as the message attaches, or more";
     // Too little and the venue's contract is never notified, or can't pay to act: the jettons would sit with it.
-    if (forward < call.minForwardTon) return "the transfer forwards too little TON for the venue's contract to act on it";
+    if (forward < floor) return "the transfer forwards too little TON for the venue's contract to act on it";
     if (!s.loadBit()) return "the venue's instruction isn't carried in a reference";
     instruction = s.loadRef();
     if (s.remainingBits !== 0 || s.remainingRefs !== 0) return "the transfer carries trailing data";
   } catch {
     return "the jetton transfer can't be read";
   }
-  return call.instruction(instruction.beginParse(), forward);
+  return call.instruction(instruction.beginParse(), forward, destination!);
 }
 
 /**
@@ -237,6 +247,18 @@ function checkCallBody(body: Cell, call: TonCallExpected, value: bigint, self: s
 export function checkTonCall(msg: TonCallMessage, call: TonCallExpected, self: string): string | null {
   const to = parseTonAddress(msg.to);
   if (!to || to.testOnly || to.bounceable === false) return "the contract call isn't sent bounceable to a TON mainnet address";
+  if (call.jetton === null) {
+    // Paid in TON (part C): the message itself pays one of the venue's pinned contracts — bounceable, so a contract
+    // that fails returns it — the reviewed input plus that contract's gas, which it must be able to act on.
+    const floor = call.destinations.get(to.raw);
+    if (floor === undefined) return "the contract call goes to a contract the app doesn't pin for this venue";
+    const gas = msg.value - call.amount;
+    if (gas <= 0n || gas > TON_BODY_GAS) return "the contract call attaches another amount than the reviewed TON and its gas allowance (0.5 TON)";
+    if (gas < floor) return "the contract call attaches too little TON for the venue's contract to act on it";
+    const body = oneCell(msg.bodyBoc);
+    if (!body) return "the contract call's body can't be read";
+    return call.instruction(body.beginParse(), gas, to.raw) ?? call.verify(msg);
+  }
   const jw = pinnedJettonWallet(call.jetton, self);
   if (jw === null || to.raw !== jw) return "the contract call isn't sent to your own jetton wallet";
   if (msg.value <= 0n || msg.value > TON_BODY_GAS) return "the contract call attaches no TON, or more than its gas allowance (0.5 TON)";

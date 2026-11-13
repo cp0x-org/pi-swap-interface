@@ -225,18 +225,51 @@ describe("routeListModel / qrRefusal (D20)", () => {
     expect(tonWalletRefusal(call("omniston"), usdt, arbUsdc)).toBeNull();
     expect(tonWalletRefusal(call("omniston"), ton, arbUsdc)).not.toBeNull();
   });
-  it("Omniston from a TON wallet is offered only as its escrow to a token on an EVM network: never a TON → TON swap, a native coin or Tron", () => {
+  it("Omniston from a TON wallet cross-chain is offered only as its escrow to a token on an EVM network: never a native coin or Tron", () => {
     const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;
     const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", chainName: "TON", family: "ton", symbol: "TON", owner: "UQx", payMode: "wallet"};
     const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
     const arbUsdc = tok(evmOnly, ARB_USDC);
-    // A TON → TON swap pays a DEX router TonAPI's label names (no pinned address, no deadline checked): refused.
-    expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "ton:-239", contract: null})).toMatchObject({reason: "TON contract calls aren't signed here yet"});
+    // A TON → TON swap whose quote names no route steps (no pinned DEX to check it against): refused (part C below).
+    expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "ton:-239", contract: null})).toMatchObject({reason: "Routed through a DEX that isn't pinned here"});
     expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "ton:-239", contract: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"})).not.toBeNull();
     // A native coin on arrival (Omniston's orders move tokens only), Tron, or no token yet.
     expect(tonWalletRefusal(call("omniston"), usdt, {...arbUsdc, contract: null})).not.toBeNull();
     expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "tron:728126428", contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"})).not.toBeNull();
     expect(tonWalletRefusal(call("omniston"), usdt, undefined)).not.toBeNull();
+  });
+  it("Omniston's swap on TON is offered only between TON and USDT, one step through a pinned DEX by its quote's own route (D35 part C)", () => {
+    const swap = (steps?: string[]) => ({...demoSnapshot().routes[0]!, provider: "omniston", execution: "calldata", ...(steps ? {tonSwapSteps: steps} : {})}) as WebRoute;
+    const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", caip2: "ton:-239", chainName: "TON", family: "ton", symbol: "TON", contract: null, owner: "UQx", payMode: "wallet"};
+    const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
+    const usde: SwapToken = {...ton, key: "ton:usde", symbol: "USDe", contract: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"};
+    // STON.fi v1, STON.fi v2, DeDust v1 — both ways.
+    for (const dex of ["StonFiV1", "StonFiV2", "DeDust"]) {
+      expect(tonWalletRefusal(swap([dex]), ton, usdt), dex).toBeNull();
+      expect(tonWalletRefusal(swap([dex]), usdt, ton), dex).toBeNull();
+    }
+    // DeDust CPMM v2 (what Omniston quotes TON → USDT through today), TONCO, swap.coffee, two hops, a split, no steps.
+    const cpmm = tonWalletRefusal(swap(["DeDustCPMMV2"]), ton, usdt);
+    expect(cpmm).toMatchObject({provider: "omniston", reason: "Routed through a DEX that isn't pinned here", category: "setup"});
+    expect(cpmm!.detail).toMatch(/through DeDust CPMM v2\. .*STON\.fi v1, STON\.fi v2's TON\/USDT router or DeDust v1/);
+    expect(cpmm!.raw).toMatch(/DeDustCPMMV2/);
+    expect(tonWalletRefusal(swap(["TonCoV2"]), usdt, ton)!.detail).toMatch(/through TONCO/);
+    expect(tonWalletRefusal(swap(["SwapCoffee"]), ton, usdt)!.detail).toMatch(/through swap\.coffee/);
+    expect(tonWalletRefusal(swap(["StonFiV2", "StonFiV2"]), usdt, ton)!.detail).toMatch(/in several hops/);
+    expect(tonWalletRefusal(swap(["split(StonFiV2|DeDust)"]), usdt, ton)!.detail).toMatch(/a DEX this app doesn't know/);
+    expect(tonWalletRefusal(swap([]), usdt, ton)!.detail).toMatch(/a route its quote doesn't name/);
+    expect(tonWalletRefusal(swap(), ton, usdt)).toMatchObject({reason: "Routed through a DEX that isn't pinned here"});
+    // Another pair: refused whatever the DEX.
+    for (const [from, to] of [[usdt, usde], [usde, ton], [ton, usde], [ton, ton]] as const)
+      expect(tonWalletRefusal(swap(["StonFiV2"]), from, to), `${from.symbol} → ${to.symbol}`).toMatchObject({reason: "Only TON ↔ USDT swaps are signed here", category: "setup"});
+    for (const why of [cpmm!, tonWalletRefusal(swap(["StonFiV1"]), usdt, usde)!]) expect(why.reason.length).toBeLessThanOrEqual(45);
+    // In the list: a pinned route is offered, the others refused beside it.
+    const snap: RouteSnapshot = {...demoSnapshot(), routes: [swap(["StonFiV1"]), {...swap(["DeDustCPMMV2"]), provider: "omniston"}], rejections: []};
+    const m = routeListModel(snap, ton, usdt);
+    expect(m.routes).toHaveLength(1);
+    expect(m.routes[0]!.tonSwapSteps).toEqual(["StonFiV1"]);
+    expect(m.refused.map((x) => x.reason)).toEqual(["Routed through a DEX that isn't pinned here"]);
+    expect(m.walletRefusedCount).toBe(1);
   });
   it("Symbiosis from a TON wallet is offered only to a token it releases directly on an EVM network: never to Tron", () => {
     const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;

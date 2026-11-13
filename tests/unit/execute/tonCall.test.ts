@@ -162,13 +162,8 @@ describe("which TON contract calls are signed (TON_CALLS)", () => {
     expect(tonCallSigned("lifi", USDT, "eip155:42161", ARB_USDC)).toBe(false);
     expect(tonCallOf(reviewedOf(F.live as Fx, {fromContract: null}))).toBeUndefined();
     expect(tonCallOf(reviewedOf(F.live as Fx, {provider: "lifi"}))).toBeUndefined();
-    expect(tonCallOf(reviewedOf(F.live as Fx))).toMatchObject({
-      provider: "symbiosis",
-      jetton: USDT,
-      amount: 50_000_000n,
-      destinations: [SYMBIOSIS_TON_PORTAL_RAW],
-      minForwardTon: FORWARD,
-    });
+    expect(tonCallOf(reviewedOf(F.live as Fx))).toMatchObject({provider: "symbiosis", jetton: USDT, amount: 50_000_000n});
+    expect(tonCallOf(reviewedOf(F.live as Fx))!.destinations).toEqual(new Map([[SYMBIOSIS_TON_PORTAL_RAW, FORWARD]]));
   });
 
   it("only for a token the Portal's pools release directly on an EVM network: not Tron, not a swap on arrival", () => {
@@ -187,7 +182,7 @@ describe("which TON contract calls are signed (TON_CALLS)", () => {
   });
 
   it("every jetton a call may be paid in has pinned wallet code, so its wallet is computed, never asked", () => {
-    for (const rule of Object.values(TON_CALLS)) for (const j of rule.jettons) expect(pinnedJettonWallet(j, SELF), j).not.toBeNull();
+    for (const rule of Object.values(TON_CALLS).flat()) for (const j of rule.jettons) expect(pinnedJettonWallet(j, SELF), j).not.toBeNull();
     expect(pinnedJettonWallet(USDT, SELF)).toBe(JW);
   });
 });
@@ -283,7 +278,7 @@ describe("the SDK's recording: USDC on Base, a swap on arrival, is never signed 
     // The direct-release rule refuses it first (tonCallOf, the route list); the venue rule's verify, run on its own,
     // reads the package's answer: a swap on the destination, which this app doesn't sign from TON.
     expect(tonCallOf(reviewedOf(f))).toBeUndefined();
-    expect(TON_CALLS.symbiosis!.verify!(reviewedOf(f), msgOf(f))).toMatch(/^symbiosis: the route swaps again on the destination/);
+    expect(TON_CALLS.symbiosis![0]!.verify!(reviewedOf(f), msgOf(f))).toMatch(/^symbiosis: the route swaps again on the destination/);
     expect(planCheck(f)).toMatch(/for a token this venue's call isn't checked for/);
   });
 
