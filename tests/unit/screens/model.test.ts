@@ -206,22 +206,37 @@ describe("routeListModel / qrRefusal (D20)", () => {
     // Without a TON wallet it is a QR payer like any other.
     expect(routeListModel(snap, {...ton, owner: null, payMode: "deposit"}).routes.map((r) => r.provider)).toEqual(["near_intents"]);
   });
-  it("a TON wallet paying USDT also takes Symbiosis' contract call (checked byte for byte, D35); every other call stays refused", () => {
+  it("a TON wallet paying USDT also takes Symbiosis' and Omniston's contract calls (checked byte for byte, D35); every other call stays refused", () => {
     const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;
     const calls: RouteSnapshot = {...snap, routes: [...snap.routes, call("symbiosis"), call("omniston")], rejections: []};
     const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", chainName: "TON", family: "ton", symbol: "TON", owner: "UQx", payMode: "wallet"};
     const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
     const arbUsdc = tok(evmOnly, ARB_USDC);
     const m = routeListModel(calls, usdt, arbUsdc);
-    expect(m.routes.map((r) => r.provider)).toEqual(["near_intents", "thorchain", "symbiosis"]);
-    expect(m.refused.map((x) => x.provider)).toEqual(["cctp", "relay", "omniston"]);
+    expect(m.routes.map((r) => r.provider)).toEqual(["near_intents", "thorchain", "symbiosis", "omniston"]);
+    expect(m.refused.map((x) => x.provider)).toEqual(["cctp", "relay"]);
     expect(m.refused.at(-1)).toMatchObject({reason: "TON contract calls aren't signed here yet", category: "setup"});
-    // Native TON, or a jetton without pinned wallet code: Symbiosis' call is refused too.
+    // Native TON, or a jetton without pinned wallet code: both venues' calls are refused too.
     expect(routeListModel(calls, ton, arbUsdc).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
     const usde = {...usdt, contract: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"};
     expect(routeListModel(calls, usde, arbUsdc).refused.map((x) => x.provider)).toEqual(["cctp", "relay", "symbiosis", "omniston"]);
     expect(tonWalletRefusal(call("symbiosis"), usdt, arbUsdc)).toBeNull();
     expect(tonWalletRefusal(call("symbiosis"), ton, arbUsdc)).not.toBeNull();
+    expect(tonWalletRefusal(call("omniston"), usdt, arbUsdc)).toBeNull();
+    expect(tonWalletRefusal(call("omniston"), ton, arbUsdc)).not.toBeNull();
+  });
+  it("Omniston from a TON wallet is offered only as its escrow to a token on an EVM network: never a TON → TON swap, a native coin or Tron", () => {
+    const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;
+    const ton: SwapToken = {...tok(evmOnly, BTC), key: "ton:native", chain: "ton", chainName: "TON", family: "ton", symbol: "TON", owner: "UQx", payMode: "wallet"};
+    const usdt: SwapToken = {...ton, key: "ton:usdt", symbol: "USDT", contract: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"};
+    const arbUsdc = tok(evmOnly, ARB_USDC);
+    // A TON → TON swap pays a DEX router TonAPI's label names (no pinned address, no deadline checked): refused.
+    expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "ton:-239", contract: null})).toMatchObject({reason: "TON contract calls aren't signed here yet"});
+    expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "ton:-239", contract: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"})).not.toBeNull();
+    // A native coin on arrival (Omniston's orders move tokens only), Tron, or no token yet.
+    expect(tonWalletRefusal(call("omniston"), usdt, {...arbUsdc, contract: null})).not.toBeNull();
+    expect(tonWalletRefusal(call("omniston"), usdt, {caip2: "tron:728126428", contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"})).not.toBeNull();
+    expect(tonWalletRefusal(call("omniston"), usdt, undefined)).not.toBeNull();
   });
   it("Symbiosis from a TON wallet is offered only to a token it releases directly on an EVM network: never to Tron", () => {
     const call = (provider: string) => ({...demoSnapshot().routes[0]!, provider, execution: "calldata"}) as WebRoute;

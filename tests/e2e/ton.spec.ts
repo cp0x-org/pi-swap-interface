@@ -18,9 +18,16 @@
  *   for). The one TON Connect request is the payer's USDT jetton wallet, the TON the venue attached, and the venue's
  *   exact BoC; an answer tampered after the review (the same jetton wallet, non-bounceable: the venue's own check reads
  *   only the raw address) is refused before the wallet is asked.
+ * - Omniston's escrow (D35 part B): USDT on TON → USDC on Base, its WebSocket API (JSON-RPC) answering from the live rev2
+ *   capture of 2026-11-11 (tests/unit/execute/omnistonEscrowRev2.fixture.json) and building the escrow with the hashlock
+ *   the page asked for. The one TON Connect request is the payer's USDT jetton wallet, 0.4 TON and that exact escrow,
+ *   whose hashlock is the hash of the one secret IndexedDB holds for the quote; a build that forwards the minter too
+ *   little TON (which Omniston's package lets through) is refused before the wallet is asked.
  */
+import {randomBytes} from "node:crypto";
 import {readFileSync} from "node:fs";
-import {Address, beginCell, storeMessage} from "@ton/core";
+import {Address, Cell, beginCell, storeMessage} from "@ton/core";
+import {keccak256} from "viem";
 import {expect, test, type Page} from "@playwright/test";
 import {isCp0xHost, isPhone, watchPage} from "./helpers";
 
@@ -374,6 +381,225 @@ test("TON: a Symbiosis answer tampered after the review is refused before the wa
   await expect(page.getByTestId("swap-error")).toContainText("isn't sent bounceable", {timeout: 30_000});
   await expect(page.getByTestId("swap-error")).toContainText("nothing was signed");
   expect(net.quotes.length, "the live quote after Confirm").toBeGreaterThan(asked);
+  expect(await tonSent(page)).toBe(0);
+  expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
+});
+
+// ── a TON contract call: Omniston's escrow paid in USDT (D35 part B) ────────────────────────────────────────────────
+
+/** The live rev2 escrow of 2026-11-11 (USDT on TON → USDC on Base), the phone's fixture. */
+const OMN = JSON.parse(readFileSync("tests/unit/execute/omnistonEscrowRev2.fixture.json", "utf8")) as OmnistonRecording;
+interface ChainValue {
+  chain: {$case: string; value: string | {kind: {$case: string; value?: string}}};
+}
+interface OmnistonRecording {
+  params: {amountIn: string; destAddress: string; refundAddress: string};
+  quoteUpdated: Record<string, unknown> & {inputUnits: string; inputAsset: ChainValue; outputAsset: ChainValue; settlementData: {value: Record<string, unknown>}};
+  escrowResponse: {messages: {targetAddress: string; sendAmount: string; payload: string}[]};
+}
+/** The trader it was built for, and its USDT jetton wallet (the message's target, computed from the pinned wallet code). */
+const OMN_RAW = Address.parse(OMN.params.refundAddress).toRawString();
+const OMN_JW = Address.parse(OMN.escrowResponse.messages[0]!.targetAddress).toRawString();
+const OMN_QUOTE = "stonfi.omni.v1beta8.QuoteRpc.Quote";
+const OMN_BUILD = "stonfi.omni.v1beta8.TonRpc.BuildEscrowTransfer";
+const OMN_TRACK = "stonfi.omni.v1beta8.OrderRpc.Track";
+
+/** The SDK's JSON (ts-proto, snake_case; a oneof is its case's key): `{chain: {$case, value}}` → `{[case]: value}`. */
+const chainJson = (a: ChainValue): Record<string, unknown> => {
+  const v = a.chain.value;
+  return {[a.chain.$case]: typeof v === "string" ? v : {[v.kind.$case]: v.kind.value ?? {}}};
+};
+const snake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+function omnistonJson(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(omnistonJson);
+  if (!v || typeof v !== "object") return v;
+  if ("chain" in v) return chainJson(v as ChainValue);
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [snake(k), omnistonJson(x)]));
+}
+
+/** The capture's escrow with the quote id and the hashlock the page asked for (`forwardTon`: what the transfer forwards). */
+function omnistonEscrow(quoteId: string, hashlock: Buffer, forwardTon?: bigint): string {
+  const s = Cell.fromBoc(Buffer.from(OMN.escrowResponse.messages[0]!.payload, "hex"))[0]!.beginParse();
+  const head = {op: s.loadUint(32), queryId: s.loadUintBig(64), amount: s.loadCoins(), destination: s.loadAddress(), response: s.loadAddress(), custom: s.loadMaybeRef(), forwardTon: s.loadCoins()};
+  s.loadBit();
+  const order = s.loadRef();
+  const o = order.beginParse();
+  o.skip(32 + 256);
+  const rest = o.loadBits(o.remainingBits);
+  const [config, ...refs] = [o.loadRef(), o.loadRef(), o.loadRef(), o.loadRef()];
+  const c = config.beginParse();
+  const configHead = c.loadBits(c.remainingBits);
+  const [state, destination] = [c.loadRef(), c.loadRef()];
+  const x = state.refs[1]!.beginParse();
+  x.skip(32 + 256);
+  const execution = beginCell().storeUint(0xc8d4b428, 32).storeBuffer(hashlock).storeBits(x.loadBits(x.remainingBits)).storeRef(x.loadRef()).endCell();
+  const newState = beginCell().storeRef(state.refs[0]!).storeRef(execution).endCell();
+  // The config's bits run to its two refs: `state` then the destination (its bit is among the bits before).
+  const newConfig = beginCell().storeBits(configHead).storeRef(newState).storeRef(destination).endCell();
+  const newOrder = beginCell().storeUint(0xc0a5f0d9, 32).storeBuffer(Buffer.from(quoteId.padStart(64, "0"), "hex")).storeBits(rest).storeRef(newConfig);
+  for (const r of refs) newOrder.storeRef(r);
+  return beginCell()
+    .storeUint(head.op, 32)
+    .storeUint(head.queryId, 64)
+    .storeCoins(head.amount)
+    .storeAddress(head.destination)
+    .storeAddress(head.response)
+    .storeMaybeRef(head.custom)
+    .storeCoins(forwardTon ?? head.forwardTon)
+    .storeBit(1)
+    .storeRef(newOrder.endCell())
+    .endCell()
+    .toBoc()
+    .toString("hex");
+}
+
+/**
+ * Prices, TonAPI (the payer's TON and USDT, its USDT jetton wallet and that wallet's state) and Omniston's WebSocket API
+ * (JSON-RPC: every RFQ answered with the capture's quote under a fresh id, the escrow built from the capture with the
+ * hashlock the page asked for — `tamper` rewrites what the build forwards — and an order feed that never names a fill,
+ * so nothing is disclosed); anything else off the page's origin is aborted and recorded.
+ */
+async function stubOmniston(page: Page, origin: string) {
+  const unexpected: string[] = [];
+  const methods: string[] = [];
+  const builds: {quoteId: string; hash: string; payload: string}[] = [];
+  const state: {forwardTon?: bigint} = {};
+  await page.route(
+    (url) => url.origin !== origin,
+    async (route) => {
+      const url = new URL(route.request().url());
+      const json = (body: unknown) => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(body)});
+      if (url.hostname === "coins.llama.fi") return json({coins: {}});
+      if (url.hostname === "api.coingecko.com") return json({});
+      if (url.hostname === "tonapi.io") {
+        if (url.pathname.endsWith("/methods/get_wallet_address")) return json({success: true, decoded: {jetton_wallet_address: OMN_JW}});
+        if (url.pathname.endsWith("/methods/get_wallet_data")) return json({success: true, decoded: {balance: "100000000", owner: OMN_RAW, jetton: USDT_RAW}});
+        if (url.pathname.endsWith("/jettons")) return json({balances: [{balance: "100000000", jetton: {address: USDT_RAW}}]});
+        // The package's own check of the target: the owner's wallet for the jetton, by TonAPI's index.
+        if (/\/jettons\/[^/]+$/.test(url.pathname)) return json({balance: "100000000", wallet_address: {address: OMN_JW}, jetton: {address: USDT_RAW}});
+        return route.fulfill({status: 200, contentType: "application/json", body: `{"address":"${OMN_RAW}","balance":10000000000,"status":"active"}`});
+      }
+      unexpected.push(url.href);
+      return route.abort("blockedbyclient");
+    },
+  );
+  await page.routeWebSocket(/^wss:\/\/omni-ws\.ston\.fi/, (ws) => {
+    let subscriptions = 0;
+    ws.onMessage((raw) => {
+      const m = JSON.parse(String(raw)) as {id?: number; method: string; params: Record<string, unknown>};
+      methods.push(m.method);
+      const reply = (result: unknown) => ws.send(JSON.stringify({jsonrpc: "2.0", id: m.id, result}));
+      const notify = (subscription: number, result: unknown) => ws.send(JSON.stringify({jsonrpc: "2.0", method: m.method, params: {subscription, result}}));
+      if (m.method === OMN_QUOTE) {
+        const sub = ++subscriptions;
+        reply(sub);
+        const now = Math.floor(Date.now() / 1000);
+        const rfqId = randomBytes(32).toString("hex");
+        const quote = {
+          ...OMN.quoteUpdated,
+          rfqId,
+          quoteId: randomBytes(32).toString("hex"),
+          quoteTimestamp: now,
+          settlementData: undefined,
+          order: {...OMN.quoteUpdated.settlementData.value, tradeStartDeadline: now + 300},
+        };
+        // After the subscription's id has reached the page: an ack, then the quote.
+        setTimeout(() => {
+          notify(sub, {ack: {rfq_id: rfqId}});
+          notify(sub, {quote_updated: omnistonJson(quote)});
+        }, 50);
+      } else if (m.method === OMN_BUILD) {
+        const quoteId = String(m.params.quote_id);
+        const hash = Buffer.from(String((m.params.htlc_secrets as {provided: {hashes: string[]}}).provided.hashes[0]), "base64");
+        const payload = omnistonEscrow(quoteId, hash, state.forwardTon);
+        builds.push({quoteId, hash: hash.toString("hex"), payload});
+        const sent = OMN.escrowResponse.messages[0]!;
+        reply({messages: [{target_address: sent.targetAddress, send_amount: sent.sendAmount, payload}]});
+      } else if (m.method === OMN_TRACK) {
+        reply(++subscriptions);
+      } else if (m.method.endsWith(".unsubscribe")) {
+        reply(true);
+      } else {
+        ws.send(JSON.stringify({jsonrpc: "2.0", id: m.id, error: {code: -32601, message: "not stubbed"}}));
+      }
+    });
+  });
+  return {unexpected, methods, builds, state};
+}
+
+/** Pay 10 USDT from the fake Tonkeeper (the capture's trader) for USDC on Base to its recipient; open the review. */
+async function reviewOmniston(page: Page) {
+  await page.goto(`./#/?pay=${USDT_TON}&receive=${USDC_BASE}&amount=10`);
+  await page.getByTestId("swap-refund-connect").click();
+  await page.getByTestId("swap-connect-tonconnect:tonkeeper").click();
+  await expect(page.getByTestId("swap-wallet-pill-ton")).toBeVisible();
+  await page.getByTestId("swap-recipient").fill(OMN.params.destAddress);
+  await expect(page.getByTestId("swap-review")).toHaveText("Review via Omniston", {timeout: 30_000});
+  await page.getByTestId("swap-review").click();
+  await expect(page.getByTestId("swap-confirm")).toBeEnabled({timeout: 30_000});
+}
+
+/** The page's IndexedDB row `os:<quoteId>`: the HTLC secret the Omniston provider stored for that quote. */
+const secretOnDisk = (page: Page, quoteId: string) =>
+  page.evaluate(
+    (key) =>
+      new Promise<unknown>((resolve, reject) => {
+        const open = indexedDB.open("cp0x-swap");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const get = open.result.transaction("kv").objectStore("kv").get(key);
+          get.onsuccess = () => resolve((get.result as {value?: unknown} | undefined)?.value ?? null);
+          get.onerror = () => reject(get.error);
+        };
+      }),
+    `os:${quoteId}`,
+  );
+
+test("TON: Omniston from a TON wallet signs one escrow transfer — the payer's USDT jetton wallet, 0.4 TON, the exact escrow, locked by the page's own secret", async ({page, baseURL}) => {
+  test.setTimeout(90_000);
+  const watch = watchPage(page);
+  const net = await stubOmniston(page, new URL(baseURL!).origin);
+  await injectFakeTonkeeper(page, OMN_RAW);
+  await reviewOmniston(page);
+  await page.getByTestId("swap-confirm").click();
+
+  await expect.poll(() => tonSent(page), {timeout: 30_000}).toBe(1);
+  const [sent] = (await page.evaluate(() => (window as unknown as {__tonSent: unknown[]}).__tonSent)) as {method: string; params: string[]}[];
+  expect(sent!.method).toBe("sendTransaction");
+  const tx = JSON.parse(sent!.params[0]!) as {valid_until: number; network: string; from: string; messages: {address: string; amount: string; payload?: string; stateInit?: string}[]};
+  expect(tx).toMatchObject({network: "-239", from: OMN_RAW});
+  expect(net.builds).toHaveLength(1);
+  const built = net.builds[0]!;
+  expect(tx.messages).toEqual([{address: OMN.escrowResponse.messages[0]!.targetAddress, amount: "400000000", payload: Buffer.from(built.payload, "hex").toString("base64")}]);
+  expect(Address.parse(tx.messages[0]!.address).toRawString()).toBe(OMN_JW);
+  expect(Address.parseFriendly(tx.messages[0]!.address).isBounceable).toBe(true);
+  expect(tx.valid_until - Date.now() / 1000).toBeLessThanOrEqual(300);
+  // The escrow is locked by the hash of the one secret the page stored for that quote, on disk before the wallet was asked.
+  const secrets = (await secretOnDisk(page, built.quoteId)) as string[];
+  expect(secrets).toHaveLength(1);
+  expect(keccak256(`0x${secrets[0]!}`).slice(2)).toBe(built.hash);
+  expect(net.methods).toContain(OMN_QUOTE);
+
+  const hosts = new Set(watch.requests.map((u) => new URL(u).hostname));
+  for (const h of TON_HOSTS) expect(hosts.has(h), h).toBe(false);
+  expect(watch.requests.filter(toBridge), "a TON Connect bridge").toEqual([]);
+  expect(watch.requests.filter(isCp0xHost), "requests to a cp0x domain").toEqual([]);
+  expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
+});
+
+test("TON: an Omniston escrow that forwards the minter too little TON to deploy it is refused before the wallet is asked", async ({page, baseURL}) => {
+  test.setTimeout(90_000);
+  const watch = watchPage(page);
+  const net = await stubOmniston(page, new URL(baseURL!).origin);
+  await injectFakeTonkeeper(page, OMN_RAW);
+  await reviewOmniston(page);
+  // From now on the build forwards 1 nanoTON (Omniston's package asks only for more than none): never deployed.
+  net.state.forwardTon = 1n;
+  await page.getByTestId("swap-confirm").click();
+
+  await expect(page.getByTestId("swap-error")).toContainText("forwards too little TON", {timeout: 30_000});
+  await expect(page.getByTestId("swap-error")).toContainText("nothing was signed");
+  expect(net.builds.length, "the escrow built after Confirm").toBe(1);
   expect(await tonSent(page)).toBe(0);
   expect(watch.errors.filter((e) => !/Failed to load resource/.test(e)), "page errors / console errors").toEqual([]);
 });

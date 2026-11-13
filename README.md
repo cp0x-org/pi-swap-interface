@@ -95,7 +95,7 @@ The venues are independent services with their own rules, and cp0x cannot change
 | Relay | cross-chain fills | Relay API | API | on |
 | Symbiosis | cross-chain swaps between EVM chains, to Tron and to TON, and from a TON wallet's USDT to EVM chains | Symbiosis API (paced to 1 request/s; in Standard mode through cp0x's proxy while cp0x holds its key) | API | on |
 | Jupiter | Solana swaps | Jupiter API | API | on |
-| Omniston (STON.fi) | HTLC orders between EVM chains | Omniston WebSocket (needs site storage) | API | on |
+| Omniston (STON.fi) | HTLC orders between EVM chains and TON, including from a TON wallet's USDT to EVM chains | Omniston WebSocket (needs site storage) | API | on |
 | Fynd (Propeller Heads) | same-chain swaps over Tycho-indexed pools, settled through the Tycho router | Fynd API, through cp0x's proxy | API | Standard mode only |
 
 Badges: **ON-CHAIN** means the quote and settlement come from contracts, with no company API in the path.
@@ -326,13 +326,18 @@ Example: your own Ethereum and Base nodes, Symbiosis on, WalletConnect on.
   them itself. On TON, the one TON Connect message the wallet gets is decoded back and checked against the same
   write: the deposit address, the amount and the comment, or, for a jetton, your own jetton wallet (computed in the
   page from the jetton's pinned wallet code — USDT only for now; other jettons are refused), the jetton amount,
-  recipient and excess address. A TON contract call — a USDT transfer carrying the venue's instruction, Symbiosis
-  only for now, to a token it releases directly on an EVM network; Omniston's and anything paid in native TON are
-  refused — is signed only as the exact bytes the venue built, read twice by the page (before anything is armed, and
-  again on the TON Connect message): your own jetton wallet, at most 0.5 TON attached for gas, exactly the reviewed
-  amount to the venue's pinned contract, the excess back to you, no custom payload, enough TON forwarded for the
-  contract to act on it, the instruction's own fee leaving at least your reviewed minimum, then the venue's own
-  verifier (its SDK package) against your reviewed recipient, refund path and minimum. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
+  recipient and excess address. A TON contract call — a USDT transfer carrying the venue's instruction: Symbiosis to
+  a token it releases directly on an EVM network, and Omniston's escrow to a token on an EVM network; Omniston's
+  TON → TON swaps and anything paid in native TON are refused — is signed only as the exact bytes the venue built,
+  read twice by the page (before anything is armed, and again on the TON Connect message): your own jetton wallet, at
+  most 0.5 TON attached for gas, exactly the reviewed amount to the venue's pinned contract, the excess back to you,
+  no custom payload, enough TON forwarded for the contract to act on it, the instruction's own fee leaving at least
+  your reviewed minimum, then the venue's own verifier (its SDK package) against your reviewed recipient, refund path
+  and minimum. Omniston's escrow is also read by the page itself (you as its owner, the reviewed network, token and
+  recipient, at least the reviewed minimum, one hash lock) and signed only once the page has read back, from this
+  browser's storage, the secret whose hash locks it — the secret is handed to Omniston only after the delivery on the
+  EVM network was checked on chain; until then (or if the resolver never delivers) the escrow refunds you after its
+  timeout. Keep site storage for this page: it is the only copy of that secret. On NEAR, the page builds the deposit transaction itself (a NEAR transfer, or the
   token's `ft_transfer`, to the deposit address), checks receiver, token, amount and memo again and that the account
   can pay the fee before the wallet signs and sends it, then holds the transaction the wallet reports to the one it
   built.

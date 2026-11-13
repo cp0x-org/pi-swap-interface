@@ -245,9 +245,10 @@ export function qrRefusal(route: WebRoute, payChainName: string): RouteRejection
 /**
  * Why a TON wallet payer can't take a route: the wallet here signs deposits (TON, jettons) and the contract calls
  * execute checks byte for byte (D35, `tonCallSigned`: Symbiosis paid in USDT for a token it releases directly on an
- * EVM network), not other contract calls — Omniston's escrow and swap transfers, Symbiosis from another token or to
- * another destination (Tron, a token it swaps to on arrival) — which are listed as refused, never offered. Without
- * the token to receive (`to`) no call is offered.
+ * EVM network, Omniston's escrow paid in USDT for a token on an EVM network), not other contract calls — Omniston's
+ * TON → TON swaps, either venue from native TON or another jetton, Symbiosis to another destination (Tron, a token it
+ * swaps to on arrival) — which are listed as refused, never offered. Without the token to receive (`to`) no call is
+ * offered.
  */
 export function tonWalletRefusal(route: WebRoute, from: Pick<SwapToken, "contract">, to: Pick<SwapToken, "caip2" | "contract"> | undefined): RouteRejection | null {
   if (route.execution !== "calldata" || (to && tonCallSigned(route.provider, from.contract, to.caip2, to.contract))) return null;

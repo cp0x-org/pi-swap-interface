@@ -15,9 +15,11 @@
  * A contract call is signed only for the reviewed route's own (`call`, tonPlan.ts tonCallOf; without it a cell body is
  * refused): `getJettonWalletAddress` names the engine that same proven wallet for the call's jetton, and the message —
  * that wallet, bounceable, the TON the write attaches, the write's BoC as its payload, byte for byte — goes through
- * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call. An account built for a
- * contract call signs nothing else: no plain TON or jetton deposit (its venue never makes one; checkTonPlan refuses
- * one first).
+ * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call, then through the call's
+ * asynchronous binding (tonPlan.ts TON_CALLS `bind`; Omniston: the secret this browser holds for the escrow's
+ * hashlock, its package's verifiers) on that same frozen request, right before the wallet is asked. An account built
+ * for a contract call signs nothing else: no plain TON or jetton deposit (its venue never makes one; checkTonPlan
+ * refuses one first).
  *
  * Outcomes: TON Connect's error answer, or the SDK's own refusal before it hands the request over, is `answered`
  * (nothing was sent), and so is any failure before an installed wallet (JS bridge) got the request. TON Connect's
@@ -135,9 +137,15 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
     return jw;
   }
 
-  /** Check the request against the write, then hand it to the wallet once. */
+  /** Check the request against the write (a contract call: and its binding), then hand it to the wallet once. */
   async function send(req: TonConnectRequest, exp: TonExpected): Promise<{hash: string}> {
-    const why = checkTonRequest(req, exp, {self: self!, now: now()});
+    // Frozen: a contract call's binding is awaited between the check and the wallet, and nothing may change in between.
+    for (const m of req.messages) Object.freeze(m);
+    Object.freeze(req.messages);
+    Object.freeze(req);
+    const why =
+      checkTonRequest(req, exp, {self: self!, now: now()}) ??
+      (exp.kind === "jetton-call" ? await exp.call.bind({to: req.messages[0]!.address, value: exp.value, bodyBoc: exp.bodyBoc}) : null);
     if (why) throw new SwapGateRefusal(`The TON message didn't match the reviewed route (${why}) — it was refused before signing.`);
     const acct = signer.sender.account;
     if (!acct || mainnetRaw(acct.address) !== self || acct.chain !== TON_NETWORK)

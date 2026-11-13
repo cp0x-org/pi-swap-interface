@@ -11,8 +11,9 @@
  *     → planWrites → arm (re-armed on a requoted plan), and never `accountChain` / `skipAccountChainCheck` (the live
  *     wallet chain is the identity the engine checks) — engineConfig below is the only place the config is built;
  *   - a TON payer's engine also gets `decodeTonBody` and `tonGasCeiling` (D35): the decoder keeps the exact BoC of a
- *     contract call, which checkPlanBrowser reads, planWrites arms and the TON account signs; the TON account only
- *     signs the reviewed route's own call (tonPlan.ts tonCallOf);
+ *     contract call, which checkPlanBrowser reads, the venue's asynchronous binding reads too (checkTonCallBinding:
+ *     Omniston's escrow against the secret this browser holds and its package's verifiers), planWrites arms and the
+ *     TON account signs; the TON account only signs the reviewed route's own call (tonPlan.ts tonCallOf);
  *   - the gate is disarmed whatever happens; the shared providers are never closed.
  */
 import type {CrossChainRouter} from "@anywalletkit/protocol-swap2-router/router";
@@ -54,7 +55,7 @@ import {
 } from "./gate";
 import {swapLockName, withSwapLock} from "./locks";
 import {tronRule, venueRule} from "./pins";
-import {tonCallOf} from "./tonPlan";
+import {checkTonCallBinding, tonCallOf} from "./tonPlan";
 
 /** executeSwap's input (mobile ExecuteInput with the signer instead of an account id). */
 export interface ExecuteSwapInput {
@@ -92,7 +93,7 @@ export interface ExecuteDeps {
 export function engineConfig(o: {
   fromChain: string;
   router: CrossChainRouter;
-  reviewExecution: (plan: Swap2ExecutionPlan) => void;
+  reviewExecution: (plan: Swap2ExecutionPlan) => void | Promise<void>;
   onExecutionPhase?: (phase: ExecutionPhase, detail?: ExecutionPhaseDetail) => void;
   decodeTonBody?: (boc: string) => TonBody;
 }): RouterSwap2Config {
@@ -181,10 +182,13 @@ export async function executeSwap(input: ExecuteSwapInput, deps: ExecuteDeps = {
     const tron = (deps.tronRule ?? tronRule)(reviewed.provider);
     let depositTo: string | undefined;
     let revokes: {token: string; spender: string}[] = [];
-    const arm = (plan: Swap2ExecutionPlan) => {
-      const why = checkPlanBrowser(plan, reviewed, rule, tron, tonBody);
+    const arm = async (plan: Swap2ExecutionPlan) => {
+      // The BoC the plan carries, read once: the plan check, the venue's binding and the armed write all see these bytes.
+      const boc = tonBody?.boc();
+      const why = checkPlanBrowser(plan, reviewed, rule, tron, tonBody) ?? (await checkTonCallBinding(plan, reviewed, boc));
       if (why) throw new SwapReviewMismatch(why);
-      const planned = planWrites(plan, tonBody?.boc());
+      if (tonBody?.boc() !== boc) throw new SwapReviewMismatch("the TON contract call's body changed while it was checked");
+      const planned = planWrites(plan, boc);
       const s = plan.source;
       depositTo = s.kind === "call" ? s.to : s.kind === "token-transfer" ? s.recipient : undefined;
       // The re-quote pass spends the allowance the first pass granted: its revoke stays armed.

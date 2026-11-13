@@ -154,14 +154,14 @@ function bridgeBoc(
 // ── the call itself ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 describe("which TON contract calls are signed (TON_CALLS)", () => {
-  it("Symbiosis paid in USDT only: not native TON, not another jetton, not Omniston", () => {
+  it("Symbiosis paid in USDT only: not native TON, not another jetton; a venue not listed never (Omniston: omnistonTon.test.ts)", () => {
     expect(tonCallSigned("symbiosis", USDT, "eip155:42161", ARB_USDC)).toBe(true);
     expect(tonCallSigned("symbiosis", TON_USDT, "eip155:42161", ARB_USDC)).toBe(true);
     expect(tonCallSigned("symbiosis", null, "eip155:42161", ARB_USDC)).toBe(false);
     expect(tonCallSigned("symbiosis", "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f", "eip155:42161", ARB_USDC)).toBe(false);
-    expect(tonCallSigned("omniston", USDT, "eip155:42161", ARB_USDC)).toBe(false);
+    expect(tonCallSigned("lifi", USDT, "eip155:42161", ARB_USDC)).toBe(false);
     expect(tonCallOf(reviewedOf(F.live as Fx, {fromContract: null}))).toBeUndefined();
-    expect(tonCallOf(reviewedOf(F.live as Fx, {provider: "omniston"}))).toBeUndefined();
+    expect(tonCallOf(reviewedOf(F.live as Fx, {provider: "lifi"}))).toBeUndefined();
     expect(tonCallOf(reviewedOf(F.live as Fx))).toMatchObject({
       provider: "symbiosis",
       jetton: USDT,
@@ -283,7 +283,7 @@ describe("the SDK's recording: USDC on Base, a swap on arrival, is never signed 
     // The direct-release rule refuses it first (tonCallOf, the route list); the venue rule's verify, run on its own,
     // reads the package's answer: a swap on the destination, which this app doesn't sign from TON.
     expect(tonCallOf(reviewedOf(f))).toBeUndefined();
-    expect(TON_CALLS.symbiosis!.verify(reviewedOf(f), msgOf(f))).toMatch(/^symbiosis: the route swaps again on the destination/);
+    expect(TON_CALLS.symbiosis!.verify!(reviewedOf(f), msgOf(f))).toMatch(/^symbiosis: the route swaps again on the destination/);
     expect(planCheck(f)).toMatch(/for a token this venue's call isn't checked for/);
   });
 
@@ -336,7 +336,9 @@ describe.each(FIXTURES)("checkPlanBrowser on %s", (_name, f) => {
     const usde = "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f";
     expect(planCheck(f, {r: reviewedOf(f, {fromContract: null})})).toMatch(/paid in TON/);
     expect(planCheck(f, {r: reviewedOf(f, {fromContract: usde})})).toMatch(/paid in a jetton/);
-    expect(planCheck(f, {plan: planOf(f, {}, {provider: "omniston"}), r: reviewedOf(f, {provider: "omniston"})})).toMatch(/contract payload this app doesn't sign/);
+    expect(planCheck(f, {plan: planOf(f, {}, {provider: "lifi"}), r: reviewedOf(f, {provider: "lifi"})})).toMatch(/contract payload this app doesn't sign/);
+    // Its bytes as another listed venue's call: the Portal isn't Omniston's minter.
+    expect(planCheck(f, {plan: planOf(f, {}, {provider: "omniston"}), r: reviewedOf(f, {provider: "omniston"})})).toMatch(/doesn't pin for this venue/);
     expect(planCheck(f, {boc: null})).toMatch(/body is missing/);
     expect(checkPlanBrowser(planOf(f), reviewedOf(f), venueRule("symbiosis"))).toMatch(/body is missing/);
     expect(planCheck(f, {plan: planOf(f, {memo: "x"})})).toMatch(/payload this network doesn't carry/);

@@ -141,7 +141,8 @@ id = await ports.execute.startSwap({from, to, reviewed, expectedOut, signer})   
       → new RouterSwap2Protocol(account, {fromChain, router: appRouter().only(provider), reviewExecution: arm, onExecutionPhase})
                                           TON payer: + decodeTonBody (keeps the BoC) and tonGasCeiling 0.5 TON (D35)
       → swap2({fromToken: catalogSymbol, toToken, toChain?, fromTokenAmount, recipient, refundAddress, minAmountOut, slippage})
-         reviewExecution(plan): checkPlanBrowser(plan, reviewed, pins?, tonBody?) → planWrites(plan, boc?) → gate.arm      (re-armed on requoted plans)
+         reviewExecution(plan): checkPlanBrowser(plan, reviewed, pins?, tonBody?) → checkTonCallBinding(plan, reviewed, boc?) (D35)
+                                → planWrites(plan, boc?) → gate.arm      (re-armed on requoted plans)
          every wallet write consumes one armed write, else SwapGateRefusal (answered)
   └ record: submitting (stage, approvals) → pending + sourceHash | maybeSent | not-sent (swapErrorText)
       the write that makes it read as sent sets `counted` → Standard only: one POST <API>/api/v2/swap-web/sent (D36)
@@ -180,8 +181,8 @@ wrap, usdt0, cctp, thorchain, chainflip, near_intents, lifi, relay, symbiosis, j
 chunk, needs IndexedDB, opens its WebSocket on the first quote; 0.5.5 trusts the rev2 TON minter that EVM→TON
 quotes name) defaulted off until
 the owner turned them on (2026-11-12), as cp0x's server runs them: USDT Ethereum → Tron showed fewer routes than the
-wallet. A Symbiosis TON source is a jetton transfer carrying its bridge request (a TON contract call, D35), so
-`executionOf` reads it as signed, never a deposit address. Omniston is off (uncounted) until its chunk is in, and a
+wallet. A Symbiosis TON source is a jetton transfer carrying its bridge request, an Omniston TON source one carrying
+its escrow order (TON contract calls, D35), so `executionOf` reads them as signed, never a deposit address. Omniston is off (uncounted) until its chunk is in, and a
 round waits up to 2 s for it (`LAZY_WAIT_MS`); between networks it is asked for tokens only (its SDK refuses a native
 leg locally); on an IPFS path gateway it stays off unless the page's operator layer turns it on (its HTLC secret
 would sit in storage every site there shares). An operator's layer or a viewer's Settings can still switch any venue
@@ -356,7 +357,8 @@ the address computed from the jetton's pinned wallet code and proven by its `get
 balance; a jetton without pinned code is refused, so only USDT is sent today), 0.05 TON + 1 nanoTON forward, and a
 body whose amount, recipient, excess address (the payer), forward amount and comment are exactly the reviewed ones;
 for a contract call (D35), that same proven wallet, bounceable, the TON the write attaches (≤ 0.5 TON) and the armed
-BoC itself, read again against the reviewed call.
+BoC itself, read again against the reviewed call, then bound again (Omniston's escrow: the secret this browser holds,
+its package's checks; D35 part B).
 TON Connect's error answer, the SDK's refusal before it hands the request over, or a failure before an installed
 wallet (JS bridge) got it, is `answered`; on TON Connect's HTTP bridge (which confirms a request only once its POST
 was answered, retrying until then) any other failure or silence is maybe-sent, as is a lost answer after the wallet
@@ -481,10 +483,10 @@ allows that file to name its page's origin and nothing else). `getSigner("ton:-2
 connector as `TonSender`, raw and friendly address, `tonApiUrl`). TON balances come from TonAPI
 (`catalog/balances/ton.ts`), asked only for a connected TON wallet. A TON contract call (a jetton transfer whose
 forward payload is the venue's instruction, a cell body) is signed only as D35 lists it — Symbiosis paid in USDT for
-a token it releases directly on an EVM network; Omniston's TON source (an escrow or a TON → TON swap) and Symbiosis
-from native TON, to Tron or to a token reached by a swap on arrival are not wired: `checkTonPlan` refuses their cell
-bodies and the route list lists such routes as refused for a TON wallet ("TON contract calls aren't signed here
-yet").
+a token it releases directly on an EVM network, Omniston's escrow paid in USDT for a token on an EVM network (part B);
+Omniston's TON → TON swaps, either venue from native TON or another jetton, and Symbiosis to Tron or to a token
+reached by a swap on arrival are not wired: `checkTonPlan` refuses their cell bodies and the route list lists such
+routes as refused for a TON wallet ("TON contract calls aren't signed here yet").
 
 **D12 — EVM engine account.** engine.md §6.1 as written: reads, gas quotes and `eth_call` simulation through
 `WalletAccountReadOnlyEvm` over the runtime RPC list; writes through the viem `WalletClient`; `getChainId()` from
@@ -535,7 +537,8 @@ hooks (call them unconditionally). The recipient's "this is a contract" warning 
 **D16 — Browser storage.**
 - `cp0x-swap` — raw IndexedDB (swap, providers.md §5.2): store `kv` with Relay `rc:<orderId>` (until the order
   deadline) and Omniston `oq:`/`os:` (6 h); writes with `durability: "strict"`; atomic `claim`. Fail-closed:
-  without storage, Relay refuses to sign ("Enable site storage to use Relay") and Omniston is not built.
+  without storage, Relay refuses to sign ("Enable site storage to use Relay") and Omniston is not built. A TON escrow
+  is signed only once the gate read its `os:` row back and found its hash is the escrow's hashlock (D35 part B).
 - `cp0x-activity` — idb-keyval `createStore("cp0x-activity", "kv")`, key `cp0x-swaps-v1`, value = the JSON string
   (`parseStored` stays the one parser); `BroadcastChannel("cp0x-swaps")` syncs tabs; the executing tab bumps
   `heartbeatAt` every 5 s and another tab marks a `submitting` record interrupted only after 30 s of silence —
@@ -1196,6 +1199,89 @@ trusting the engine's summary (which skips a custom payload and doesn't read the
     `tests/e2e/ton.spec.ts`: a fake Tonkeeper pays 50 USDT for USDC on Arbitrum through Symbiosis' stubbed API — the
     one request is the jetton wallet, the TON attached and the exact BoC — and an answer tampered after the review (the
     same wallet, non-bounceable) is refused before the wallet is asked.
+- **Part B — Omniston's escrow paid in USDT (TON → EVM).** From TON an Omniston order is an HTLC escrow: the payer's
+  USDT jetton wallet sends the input to Omniston's TON Escrow Minter with an escrow order (`0xc0a5f0d9`) locked by the
+  hash of a secret only this browser holds; the resolver delivers on the EVM network and the package's `trackIntent`
+  discloses the secret once `validateEvmOutputPosition` proved that delivery — or the escrow refunds the payer after
+  its timelocks. The message exists only after the local provider's `buildDeposit`, which generates and stores the
+  secret and runs the package's payload check (`validateTonEscrowPayload`) on what Omniston built.
+  - *Venue rule.* `TON_CALLS.omniston` (tonPlan.ts): paid only in USDT (an escrow from native TON is refused, as the
+    phone refuses it: "an escrow body needs a jetton source"), for an ERC-20 on an EVM network Omniston's escrow check
+    encodes and audits a settlement contract on (`omnistonEscrowServes`; not a TON → TON swap — a DEX router TonAPI's
+    label names, no deadline checked — not a native coin, not Tron); the transfer may pay only `OMNISTON_TON_MINTER`,
+    the rev2 minter EQDybO88… pinned in the main bundle (a test holds it equal to the package's
+    `AUDITED_OMNISTON_SETTLEMENT_CONTRACTS["ton:-239"]`; rev1 never); it forwards at least 0.3 TON (`minForwardTon`,
+    every recording's: two live escrows, 2026-10-10 and 2026-11-11, and the dry build of 2026-11-13 — 0.4 TON
+    attached, under `TON_BODY_GAS`).
+  - *The app's own decode* (checkTonCall, unchanged, then `omnistonInstruction`): the envelope and the TEP-74 transfer
+    as in part A (one message, mainnet, the reviewed wallet, ≤ 5 min, no state init; to the payer's pinned-code jetton
+    wallet, bounceable, ≤ 0.5 TON; op `0x0f8a7ea5`, the reviewed amount, the pinned minter, excess to the payer, a
+    custom payload refused, forward between the floor and the TON attached, the order in a reference, nothing after
+    it); then the order itself: op `0xc0a5f0d9`, the payer as owner (where it refunds) in the order and in its owner
+    data, the TON the minter forwards to the escrow some and less than what the transfer brings it (the instruction
+    reader is now told that amount; Symbiosis ignores it), its four cells; the config's one resolver, no Dutch auction,
+    a destination, one full fill; the execution locked by ONE keccak hash and naming the same resolver; the
+    destination the reviewed EVM network, token and recipient, the resolver bound to send at least the reviewed
+    minimum; every cell read to its end. The pins (escrow and execution code, authority key, timelocks, the deposit)
+    are the package's, below.
+  - *Bound beyond its bytes* (TON_CALLS `bind`, a new, asynchronous half of a rule: `omnistonEscrow.ts`, a chunk of its
+    own with @ton/core and the package, loaded for this call only). (1) The build: omniston.ts keeps every escrow
+    whose `validateTonEscrowPayload` passed, by its exact payload (`omnistonBuilds.ts`, in memory, the last 16) — the
+    provider's binding to the quote it cached (quote id, resolver, deposit, exclusivity, what the resolver sends); a
+    BoC it didn't build and check, or naming another quote id, is refused. (2) The hashlock: the one secret IndexedDB
+    holds for that quote (`os:<quoteId>`, read back from disk), hashed with keccak-256, must be the escrow's hashlock
+    and the build's — so the preimage is on disk before anything is signed, and no one else's unlocks the payer's
+    USDT. (3) The package's `validateTonEscrowPayload` again on these bytes, the review's side from the review (the
+    amount, the payer as owner, the network, token and recipient), the hashlock of (2), the quote's side from (1).
+    (4) `omnistonEscrowVerifier` — the phone's construction (mobile pins.ts): an escrow body needs a jetton source,
+    then `omnistonVerifyBuild({...createOmnistonTonValidators({tonApiUrl}), integratorAddress: null})` — on the exact
+    BoC with a quote and a request rebuilt from the review (never the live quote, so always its escrow branch): the
+    audited settlement contract, the amount, owner and destination again, the resolver bound to send at least the
+    reviewed minimum. Its `verifyTonEscrowBuild` reads the quote id, resolver and hashlock from the body itself, so it
+    is never run alone: (1)–(3) bind those.
+  - *Where it runs.* execute.ts's `arm` is async now (the engine awaits `reviewExecution`): it reads the kept BoC once,
+    runs `checkPlanBrowser` and then `checkTonCallBinding(plan, reviewed, boc)` (null for anything but a TON cell body
+    and for a venue without a `bind`), refuses if the kept BoC changed meanwhile, and arms that BoC. The TON account
+    freezes the TON Connect request, runs `checkTonRequest` and then the call's `bind` on it, right before the wallet is
+    asked; a `bind` that throws is a refusal. Symbiosis' rule has no `bind` (its `verify` is synchronous); every rule
+    has a `verify`, a `bind` or both (a test holds them to it).
+  - *The secret's life*, unchanged in the package and wired as it already was for a TON source: buildDeposit saves it
+    (stores.ts, durability "strict", `navigator.storage.persist()` asked once) before it asks Omniston for the escrow;
+    the gate signs only after reading it back (above); `trackIntent` discloses it only after `validateEvmOutputPosition`
+    (`createOmnistonEvmOutputValidator` over the page's RPC table) proved the EVM position for this quote, hashlock and
+    recipient — the activity tracker polls the record through the router (`getSwap2Status`), after a reload too, the
+    `oq:`/`os:` rows being IndexedDB's; a fill clears them. A tab closed while the wallet's prompt is open and signed in
+    the wallet app afterwards leaves no record to poll: the secret is never disclosed and the escrow refunds the payer.
+  - *Route list.* `tonCallSigned("omniston", USDT, EVM chain, ERC-20)` lifts the refusal for that case only; Omniston's
+    TON → TON swaps, an escrow from native TON or another jetton, to a native coin or Tron stay refused.
+  - *Still trusted*, as on the phone: Omniston's contracts and the resolver — its price, its identity and its deposit
+    (the quote's, held to the build), whether it fills at all (else a refund after the timelocks); the auxiliary and
+    flags cells (shape only, the package's); TonAPI for the package's own jetton-wallet check (the pinned-code wallet
+    backstops it); the gas it attaches (0.4 TON in every recording), capped at 0.5 TON, the excess refunded. What the
+    resolver is bound to send includes the protocol fee (0.03 % recorded); what the recipient gets is the quote's
+    output, at least the reviewed minimum (checkPlan), and the disclosure checks it on chain before the secret leaves.
+    No TON-source escrow has been signed from the web live yet.
+  - *Tests.* `tests/unit/execute/omnistonTon.test.ts` over `omnistonEscrowRev2.fixture.json` (the phone's live rev2
+    capture of 2026-11-11, USDT on TON → USDC on Base): the pin against the package's table; every field at the plan
+    (target, bounce, gas, op, amount, rev1 or another minter, excess, custom payload, forward at or past the TON
+    attached, 0, 1 nanoTON, just under the floor, inline or trailing data; the order's op, owner twice, layout bits,
+    escrow gas, config op, Dutch auction, parts, a sha256 or two-resolver execution, network, token, recipient, a
+    delivery under the reviewed minimum); the binding (bytes the provider didn't check, another quote id, someone
+    else's hashlock, no secret on disk, another or two secrets, a build kept with another hash or hashing function;
+    another resolver, deposit, window, timelocks, escrow code, authority key or delivery than the quote's; the review's
+    recipient, network, token, owner or amount; the reviewed minimum above what the resolver sends; native TON); the
+    phone's pins.test.ts:68-105 port (pass, destination, owner, token, amount, short delivery, not an escrow, native
+    TON, no request, rev1 refused by name); the account binding again right before the wallet (a secret cleared by then
+    is refused); the real engine and the real Omniston provider (`lazyOmniston` → `buildOmniston` over IndexedDB, its
+    WebSocket client replaced by a recording one) through executeSwap to a fake TON Connect wallet — one request (the
+    jetton wallet, 0.4 TON, the exact escrow), the one secret for the quote on disk while the wallet is asked and its
+    hash the escrow's hashlock; four tampered builds refused before the wallet (0.6 TON, non-bounceable, 1 nanoTON
+    forwarded, the secret gone after the build); and the secret's life through the activity tracker's `pollRecord`: not
+    disclosed while `validateEvmOutputPosition` refuses or throws, disclosed after a reload (a new provider and stores
+    over the same IndexedDB) once it passes, cleared on the fill. `tests/e2e/ton.spec.ts`: Omniston's WebSocket API
+    stubbed (JSON-RPC, the capture's quote, the escrow built with the hashlock the page asked for) — the one TON
+    Connect request is the jetton wallet, 0.4 TON and that escrow, the page's IndexedDB holding the one secret whose
+    hash locks it; a build forwarding the minter 1 nanoTON is refused before the wallet is asked.
 
 ---
 
@@ -1410,7 +1496,9 @@ files, conformance green, your tests pass (report exact counts), no new dependen
 7. The gate is in-page JavaScript: it stops engine/provider mistakes, not a compromised bundle — CSP, a pinned lockfile,
    no third-party scripts.
 8. Omniston (on by default since 2026-11-12): the browser is the only HTLC secret holder; EVM→TON was blocked by an
-   SDK pin until 0.5.5 (the rev2 TON minter), not re-measured live here.
+   SDK pin until 0.5.5 (the rev2 TON minter), not re-measured live here. From a TON wallet (D35 part B) a tab closed
+   while the wallet's prompt is still open, then signed in the wallet app, leaves no record to poll: the secret stays
+   on disk undisclosed and the escrow refunds the payer after its timelocks (no live TON-source escrow signed here yet).
 9. Without storage, Relay refuses to sign (fail-closed) and Omniston is unavailable.
 10. `suspendedChains` is static config: pausing a 1Click corridor fast means serving a new `runtime-config.json`.
 11. Prices from keyless public APIs: a price outage blocks EVM swaps on non-ETH chains (unpriced native → no fee cap).

@@ -52,7 +52,7 @@ export function lazyOmniston(config: RuntimeConfig, stores: ProviderStores, rpcU
   };
   const standIn: CrossChainProvider = {
     name: "omniston",
-    // TON ↔ TON is same-chain (a TON wallet is a later phase).
+    // TON ↔ TON is same-chain (a TON wallet doesn't sign those swaps: no DEX router pinned, D35).
     supportsSameChain: true,
     // Off while loading, and for good when it can't load. Tracking and execution reach get() through the router's
     // provider lookup, which doesn't read enabled().

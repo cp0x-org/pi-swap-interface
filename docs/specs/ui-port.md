@@ -1016,7 +1016,8 @@ RouteRow states (same frame as §2.2):
   signs on {Chain}" / "Needs a memo — not for QR payments". A TON wallet payer (web, ARCHITECTURE D11, D35): a
   `calldata` route is `refused` (category `setup`) with reason "TON contract calls aren't signed here yet", except a
   contract call execute checks byte for byte (`tonCallSigned`: Symbiosis paid in USDT for a token it releases directly
-  on an EVM network — not Tron, nothing reached by a swap on arrival), which is a `route`.
+  on an EVM network — not Tron, nothing reached by a swap on arrival; Omniston's escrow paid in USDT for an ERC-20 on an
+  EVM network — not its TON → TON swaps, not a native coin), which is a `route`.
 - `updating` (web, D32): a `route` row whose route is held — same frame, key and place; the amount column and the
   meta line at opacity .45 (0.2 s; instant with reduced motion), `aria-busy="true"`, ", updating" at the end of its
   label. Still selectable. `outdated`: the same once no round runs (it failed, or a preview waits for its token),

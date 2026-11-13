@@ -8,7 +8,9 @@
  *   memory only.
  * - Omniston's quote rows `oq:<id>` and HTLC secret rows `os:<id>` (6 h). The
  *   browser is the only holder of the secret, so writes commit with
- *   durability "strict" before the order it locks is signed.
+ *   durability "strict" before the order it locks is signed; a TON escrow is
+ *   signed only once execute's gate read its secret back from here and found
+ *   the escrow's hashlock is its hash (D35, execute/omnistonEscrow.ts).
  *
  * The database opens lazily on first use, so building providers stays
  * synchronous and a page that never signs never touches storage.
