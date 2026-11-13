@@ -3,21 +3,31 @@
  * engine-account boundary; a TON source then becomes a TON Connect request the account builds itself, and the
  * wallet signs whatever that request says. So the request is checked too, decoded back from its own BoCs:
  *
- *   - `checkTonPlan` (tonPlan.ts, from checkPlanBrowser): the plan is a deposit with at most a text comment.
+ *   - `checkTonPlan` (tonPlan.ts, from checkPlanBrowser): the plan is a deposit with at most a text comment, or a
+ *     venue's contract call (TON_CALLS) whose exact BoC passes `checkTonCall`.
  *   - `checkTonRequest` (in the account, right before `sendTransaction`): one message, mainnet, from the reviewed
  *     wallet, valid for at most 5 minutes, no state init; native: the deposit address (its bounce flag too), the
  *     exact amount, the comment or nothing; jetton: the payer's own jetton wallet for the reviewed jetton master,
  *     the fixed gas, and a transfer body whose amount, recipient, excess address (the payer), forward amount and
- *     comment are exactly the reviewed ones — no custom payload, no trailing data.
+ *     comment are exactly the reviewed ones — no custom payload, no trailing data; jetton-call (D35): the payer's own
+ *     jetton wallet, bounceable, exactly the TON the write attaches, the armed BoC itself as the payload, and that BoC
+ *     through `checkTonCall` again.
+ *   - `checkTonCall` (D35): a venue's contract call, read here from its exact BoC — the payer's own jetton wallet,
+ *     at most TON_BODY_GAS attached, a TEP-74 transfer of exactly the reviewed amount to one of the venue's pinned
+ *     contracts, excess to the payer, no custom payload, less TON forwarded than attached, the venue's instruction in
+ *     a reference and nothing after it — then the venue package's own verifier on the same message.
  *   - `pinnedJettonWallet`: the payer's USDT jetton wallet computed here from the jetton's pinned wallet code, so a
  *     public API's answer for it is checked, not trusted.
+ *   - `captureTonBody`: the engine's `decodeTonBody` for one TON execution, which keeps the BoC it is handed.
  *
- * Pure (@ton/core's cell codec only), and loaded with the TON account only (a lazy chunk, beside Omniston's) —
- * unit-tested in tests/unit/execute/ton.test.ts.
+ * Pure (@ton/core's cell codec, and the venues' own verifiers through tonPlan.ts), and loaded with the TON account
+ * only (a lazy chunk, beside Omniston's) — unit-tested in tests/unit/execute/ton.test.ts.
  */
 import {Buffer} from "buffer";
 import {Address, Cell, beginCell, contractAddress, loadMessage, storeMessage, type Slice} from "@ton/core";
 import type {TonConnectRequest} from "../contracts/execution";
+import {SwapReviewMismatch, TON_BODY_GAS} from "./gate";
+import type {TonBodyCheck, TonCallExpected, TonCallMessage} from "./tonPlan";
 
 /** TON Connect's mainnet network id. */
 export const TON_NETWORK = "-239";
@@ -97,7 +107,12 @@ const hexBytes = (hex: string) => Buffer.from(hex, "hex");
 export type TonExpected =
   | {kind: "native"; to: string; value: bigint; comment?: string}
   /** `jettonWallet`: the payer's own wallet for the reviewed jetton master (resolved and proven by the account). */
-  | {kind: "jetton"; jettonWallet: string; recipient: string; amount: bigint; comment?: string};
+  | {kind: "jetton"; jettonWallet: string; recipient: string; amount: bigint; comment?: string}
+  /**
+   * A venue's contract call (D35): `jettonWallet` as above, `value` the TON the write attaches, `bodyBoc` the armed BoC
+   * the write carries, `call` what the reviewed route fixes about the transfer.
+   */
+  | {kind: "jetton-call"; jettonWallet: string; value: bigint; bodyBoc: string; call: TonCallExpected};
 
 /** One BoC with one ordinary root cell, or null. */
 function oneCell(boc: unknown): Cell | null {
@@ -159,6 +174,15 @@ export function checkTonRequest(req: TonConnectRequest, exp: TonExpected, ctx: {
   const payload = m.payload === undefined ? null : oneCell(m.payload);
   if (m.payload !== undefined && !payload) return "the message payload can't be read";
 
+  if (exp.kind === "jetton-call") {
+    if (to.raw !== mainnetRaw(exp.jettonWallet) || !to.bounceable) return "the message isn't sent to your own jetton wallet";
+    if (amount !== exp.value) return "the message attaches another TON amount than the reviewed one";
+    if (!payload || m.payload === undefined) return "the contract call's body is missing";
+    // The armed BoC itself: the same bytes, so the same cell (its hash) — what the plan check read is what is signed.
+    const armed = oneCell(exp.bodyBoc);
+    if (m.payload !== exp.bodyBoc || !armed || !payload.hash().equals(armed.hash())) return "the message body isn't the reviewed one";
+    return checkTonCall({to: m.address, value: amount, bodyBoc: m.payload}, exp.call, ctx.self);
+  }
   if (exp.kind === "native") {
     if (m.address !== messageAddress(exp.to)) return "the message goes to another address than the deposit address";
     if (amount !== exp.value) return "the message sends another amount than the reviewed one";
@@ -169,6 +193,70 @@ export function checkTonRequest(req: TonConnectRequest, exp: TonExpected, ctx: {
   if (amount !== TON_JETTON_ATTACHED) return "the message attaches another TON amount than the jetton transfer's gas";
   if (!payload) return "the jetton transfer is missing";
   return checkJettonBody(payload, exp, ctx.self);
+}
+
+/** Why the cell body is not a TEP-74 transfer of the reviewed call (amount, destination, excess, forward), or null. */
+function checkCallBody(body: Cell, call: TonCallExpected, value: bigint, self: string): string | null {
+  try {
+    const s = body.beginParse();
+    if (s.loadUint(32) !== JETTON_TRANSFER_OP) return "the contract call is not a jetton transfer";
+    s.loadUintBig(64); // query id: any
+    if (s.loadCoins() !== call.amount) return "the jetton amount isn't the reviewed one";
+    const destination = addressOf(s);
+    if (destination === null || !call.destinations.includes(destination)) return "the jettons go to a contract the app doesn't pin for this venue";
+    if (addressOf(s) !== self) return "the transfer's excess goes to another wallet";
+    // Refused, not skipped: a custom payload is acted on by the payer's own jetton wallet.
+    if (s.loadBit()) return "the transfer carries a custom payload";
+    if (s.loadCoins() >= value) return "the transfer forwards as much TON as the message attaches, or more";
+    if (!s.loadBit()) return "the venue's instruction isn't carried in a reference";
+    s.loadRef();
+    if (s.remainingBits !== 0 || s.remainingRefs !== 0) return "the transfer carries trailing data";
+    return null;
+  } catch {
+    return "the jetton transfer can't be read";
+  }
+}
+
+/**
+ * Why a TON contract call is not the reviewed one from `self` (raw), or null (D35) — at the plan (checkTonPlan) and
+ * again on the TON Connect message. Every expectation is the reviewed route's (`call`, tonPlan.ts tonCallOf) or the
+ * app's own: never the quote's.
+ */
+export function checkTonCall(msg: TonCallMessage, call: TonCallExpected, self: string): string | null {
+  const to = parseTonAddress(msg.to);
+  if (!to || to.testOnly || to.bounceable === false) return "the contract call isn't sent bounceable to a TON mainnet address";
+  const jw = pinnedJettonWallet(call.jetton, self);
+  if (jw === null || to.raw !== jw) return "the contract call isn't sent to your own jetton wallet";
+  if (msg.value <= 0n || msg.value > TON_BODY_GAS) return "the contract call attaches no TON, or more than its gas allowance (0.5 TON)";
+  const body = oneCell(msg.bodyBoc);
+  if (!body) return "the contract call's body can't be read";
+  return checkCallBody(body, call, msg.value, self) ?? call.verify(msg);
+}
+
+/** A TON cell body as the engine holds it: a parsed cell (it reads the transfer before the review) and its exact BoC. */
+export interface TonBody {
+  /** The BoC the engine was handed — what is checked, armed and signed (gated.ts sends this on, never a re-encoding). */
+  readonly __bocBase64: string;
+  beginParse(): Slice;
+}
+
+/**
+ * One TON execution's cell body (D35, mobile execute.ts decodeTonBody): the engine's `decodeTonBody` keeps the BoC it
+ * is handed and returns a TonBody over its one ordinary root cell (anything else is refused before the review); `boc`
+ * and `check` are checkTonPlan's view of that very BoC. The last body the engine decoded is the one its plan carries.
+ */
+export function captureTonBody(): TonBodyCheck & {decodeTonBody(boc: string): TonBody} {
+  let kept: string | undefined;
+  return {
+    decodeTonBody(boc) {
+      const cell = oneCell(boc);
+      if (!cell) throw new SwapReviewMismatch("the TON contract call's body can't be read");
+      kept = boc;
+      return Object.freeze({__bocBase64: boc, beginParse: () => cell.beginParse()});
+    },
+    boc: () => kept,
+    check: checkTonCall,
+  };
 }
 
 /**

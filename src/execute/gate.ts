@@ -21,7 +21,7 @@ import type {Swap2ExecutionPlan} from "@anywalletkit/protocol-swap2-core/swap2/b
 import type {RemotePins} from "@anywalletkit/protocol-swap2-core/types";
 import type {ChainFamily} from "../contracts/domain";
 import type {ReviewedSwap} from "../contracts/execution";
-import {checkTonPlan} from "./tonPlan";
+import {checkTonPlan, type TonBodyCheck} from "./tonPlan";
 
 /** How a Tron memo becomes `raw_data.data` bytes: utf8 text (the default) or a 0x-hex binary note (Chainflip). */
 export type MemoEncoding = "utf8" | "hex";
@@ -155,8 +155,7 @@ export function readApprove(data: unknown): {spender: string; amount: bigint} | 
 
 /**
  * The exact writes an accepted plan makes, in order, plus the allowances it may revoke. `tonBodyBoc`: the cell
- * body the engine decoded for a TON deposit (the plan only says there is one) — checkTonPlan refuses cell bodies
- * until Omniston's TON source is wired.
+ * body the engine decoded for a TON contract call (the plan only says there is one) — the BoC checkTonPlan read (D35).
  */
 export function planWrites(
   plan: Swap2ExecutionPlan,
@@ -220,7 +219,10 @@ export const executionConstraints = (r: Pick<ReviewedSwap, "minOut" | "slippageB
   slippage: r.slippageBps / 10_000,
 });
 
-/** The most nanoTON a TON cell-body deposit may attach as gas (0.5 TON) — kept so checkPlan stays the mobile one. */
+/**
+ * The most nanoTON a TON cell-body deposit may attach as gas (0.5 TON): checkPlan's allowance (the mobile one), the
+ * engine's `tonGasCeiling` (execute.ts), and tonGate.ts checkTonCall's cap on a contract call (D35).
+ */
 export const TON_BODY_GAS = 500_000_000n;
 
 /** Why the live plan is not the reviewed route, or null (mobile checkPlan, verbatim). */
@@ -304,9 +306,10 @@ const evmChainId = (caip2: string): number | null => (caip2.startsWith("eip155:"
  * checkPlan plus the browser's own checks: the payload kind must suit the chain family, chain ids must be the
  * source chain's, on EVM the venue's rule applies (`venue` undefined = a venue the app has no rule for: its
  * calldata is refused, a plain send passes on checkPlan alone), on Tron its Tron rule (`tron` undefined: refused), on
- * TON checkTonPlan, and on NEAR only a deposit venue's payment. Returns why it is refused, or null.
+ * TON checkTonPlan (`tonBody`: the TON chunk's reader of the cell body the engine was handed; without it a contract
+ * call is refused), and on NEAR only a deposit venue's payment. Returns why it is refused, or null.
  */
-export function checkPlanBrowser(plan: Swap2ExecutionPlan, r: ReviewedSwap, venue?: VenueRule, tron?: TronRule): string | null {
+export function checkPlanBrowser(plan: Swap2ExecutionPlan, r: ReviewedSwap, venue?: VenueRule, tron?: TronRule, tonBody?: TonBodyCheck): string | null {
   const base = checkPlan(plan, r);
   if (base) return base;
   const ns = plan.fromChain.split(":")[0];
@@ -321,7 +324,7 @@ export function checkPlanBrowser(plan: Swap2ExecutionPlan, r: ReviewedSwap, venu
     if (s.kind === "token-transfer" && s.memo !== undefined) return "a memo the review didn't show";
   }
   if (ns === "tron") return checkTronPlan(plan, r, tron);
-  if (ns === "ton") return checkTonPlan(plan);
+  if (ns === "ton") return checkTonPlan(plan, r, tonBody);
   if (ns === "near") {
     // Only a deposit venue's payment is signed on NEAR: the exact input, as NEAR or the reviewed NEP-141, to the
     // quote's deposit address, with no memo (the review shows none). accounts/near.ts holds the transaction to it.

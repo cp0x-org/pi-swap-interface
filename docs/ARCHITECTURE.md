@@ -139,8 +139,9 @@ id = await ports.execute.startSwap({from, to, reviewed, expectedOut, signer})   
       navigator.locks "cp0x-swap:<fromChain>:<payer>" (ifAvailable) → createSwapGate(fromChain) → engine account (EVM | Solana | TON)
       → refuse smart-contract accounts (EVM) → wallet account === reviewed.refundAddress → gateAccount(raw, gate)
       → new RouterSwap2Protocol(account, {fromChain, router: appRouter().only(provider), reviewExecution: arm, onExecutionPhase})
+                                          TON payer: + decodeTonBody (keeps the BoC) and tonGasCeiling 0.5 TON (D35)
       → swap2({fromToken: catalogSymbol, toToken, toChain?, fromTokenAmount, recipient, refundAddress, minAmountOut, slippage})
-         reviewExecution(plan): checkPlanBrowser(plan, reviewed, pins?) → planWrites → gate.arm      (re-armed on requoted plans)
+         reviewExecution(plan): checkPlanBrowser(plan, reviewed, pins?, tonBody?) → planWrites(plan, boc?) → gate.arm      (re-armed on requoted plans)
          every wallet write consumes one armed write, else SwapGateRefusal (answered)
   └ record: submitting (stage, approvals) → pending + sourceHash | maybeSent | not-sent (swapErrorText)
       the write that makes it read as sent sets `counted` → Standard only: one POST <API>/api/v2/swap-web/sent (D36)
@@ -343,15 +344,18 @@ the catalog's contract, from the payer, the reviewed memo, no other field), dry-
 for one `trx.sign` (never a broadcast), keeps only a signature that recovers the payer over its own txID, and
 broadcasts its own bytes (`/wallet/broadcasthex`, host by host: every host refusing = not sent; a lost answer =
 maybe-sent with the txID).
-TON (2026-11-12): `checkPlanBrowser` holds a TON plan to `checkTonPlan` (`src/execute/tonPlan.ts`: a deposit only —
-TON to an address or a jetton transfer, at most a text comment; no approval, no cell body, mainnet addresses), and
+TON (2026-11-12): `checkPlanBrowser` holds a TON plan to `checkTonPlan` (`src/execute/tonPlan.ts`: a deposit —
+TON to an address or a jetton transfer, at most a text comment; no approval, mainnet addresses; a cell body only as a
+venue's TON contract call, D35), and
 the TON account (`accounts/ton.ts`, a lazy chunk with `@ton/core`) turns the consumed write into ONE TON Connect
 message that `checkTonRequest` (`src/execute/tonGate.ts`) decodes back from its own BoCs before `sendTransaction`:
 mainnet, from the reviewed wallet, ≤ 5 min validity, no state init; the deposit address (bounce flag included), the
 amount, the comment or none; for a jetton, the payer's own jetton wallet (TonAPI's `get_wallet_address`, equal to
 the address computed from the jetton's pinned wallet code and proven by its `get_wallet_data` — owner, master,
 balance; a jetton without pinned code is refused, so only USDT is sent today), 0.05 TON + 1 nanoTON forward, and a
-body whose amount, recipient, excess address (the payer), forward amount and comment are exactly the reviewed ones.
+body whose amount, recipient, excess address (the payer), forward amount and comment are exactly the reviewed ones;
+for a contract call (D35), that same proven wallet, bounceable, the TON the write attaches (≤ 0.5 TON) and the armed
+BoC itself, read again against the reviewed call.
 TON Connect's error answer, the SDK's refusal before it hands the request over, or a failure before an installed
 wallet (JS bridge) got it, is `answered`; on TON Connect's HTTP bridge (which confirms a request only once its POST
 was answered, retrying until then) any other failure or silence is maybe-sent, as is a lost answer after the wallet
@@ -1106,6 +1110,40 @@ daily cron (its `docs/swap-web-proxy.md` §8): per-UTC-day counts of venue × di
   `{venue: "near_intents", from: "tron:728126428", to: "eip155:8453", mode: "wallet"}` as `text/plain`, and nothing
   more after a reload; in Public the same swap reaches no cp0x host. The Tron fake moved from tron.spec.ts to
   `tests/e2e/fakeTron.ts`, which both specs use.
+
+**D35 — TON contract calls (owner, 2026-11-13).** From a TON wallet Omniston and Symbiosis aren't paid by a deposit:
+the wallet sends one jetton transfer from the payer's own USDT jetton wallet whose forward payload is the venue's
+instruction to its contract — a cell body (Symbiosis' bridge request, Omniston's escrow order). `checkTonPlan` refused
+every cell body and the route list every such route for a TON wallet. They are enabled one venue at a time, each only
+once the EXACT BoC the wallet will sign passes the app's own decode AND the venue package's verifier, with every
+expectation taken from the reviewed route, never from the quote; no existing check is loosened, every new path adds
+one. Mobile signs both venues through the same engine hooks (its execute.ts, pins.ts); the web binds the jetton wallet
+to the pinned wallet code instead of the jetton master's answer over RPC, and decodes the transfer itself instead of
+trusting the engine's summary (which skips a custom payload and doesn't read the destination).
+- **Part A — the plumbing.**
+  - *Engine.* For a TON payer only, `engineConfig` gets `decodeTonBody` (tonGate.ts `captureTonBody`: keeps the BoC it
+    is handed, refuses anything but one ordinary root cell, returns a frozen `{__bocBase64, beginParse}` — the engine
+    reads the transfer before the review) and `tonGasCeiling: TON_BODY_GAS` (0.5 TON; the engine's default is 1 TON).
+    `arm` hands that BoC to `checkPlanBrowser` and `planWrites(plan, boc)`: the write armed is the BoC read.
+  - *Plan.* `checkTonPlan`'s blanket refusal became the venue rule `TON_CALLS` (tonPlan.ts), empty for now: a listed
+    venue only, paid only in a listed jetton with pinned wallet code (never native TON), no calldata or memo, and the
+    captured BoC through `checkTonCall` (tonGate.ts): sent bounceable to the payer's own jetton wallet computed from
+    the pinned code (no API asked), at most 0.5 TON attached, one ordinary root read as a TEP-74 transfer — op
+    `0x0f8a7ea5`, exactly the reviewed amount, to one of the venue's pinned contracts, excess to the payer, a custom
+    payload refused (not skipped), less TON forwarded than attached, the instruction in a reference and nothing
+    after it — then the venue package's own verifier on the same message, its request rebuilt from the review.
+    checkPlan's own checks (minimum ≥ the reviewed one, gas only for a jetton source) still run first.
+  - *Gate.* The engine hands the account the decoded body; on a TON gate `gateAccount` turns it into `bodyBoc` (the
+    BoC it carries) before the frozen copy, which can't copy a Cell, so `matches` holds it to the armed BoC byte for
+    byte; any other non-text body is refused. `getJettonWalletAddress` passes as a read.
+  - *Account.* `tonEngineAccount(signer, deps, tonCallOf(reviewed))` signs no contract call but the reviewed route's
+    own. `getJettonWalletAddress` names the payer's jetton wallet for that call's jetton only — the pinned-code
+    address, TonAPI's answer checked against it, proven by `get_wallet_data` (owner, master, balance ≥ the amount) —
+    and `sendTransaction({to, value, bodyBoc})` proves it again and builds ONE message: `to` as written (a raw one
+    bounceable), the TON the write attaches, the write's BoC as the payload. checkTonRequest's new `jetton-call` kind
+    (the `jetton` kind is unchanged) holds it to the envelope (one message, mainnet, the reviewed wallet, ≤ 5 min, no
+    state init), the proven wallet, bounceable, the exact TON amount, the armed BoC (same string, same cell hash), and
+    runs `checkTonCall` on it again.
 
 ---
 

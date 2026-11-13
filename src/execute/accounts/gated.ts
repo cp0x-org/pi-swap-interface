@@ -7,12 +7,26 @@
  *
  * Only the members the engine is known to call survive (engine.md §5.2): an adapter growing an extra write method
  * cannot leak past the gate by accident.
+ *
+ * A TON contract call (D35) reaches `sendTransaction` with the engine's cell body — the object execute.ts's
+ * decodeTonBody returned (tonGate.ts captureTonBody), which structuredClone can't copy. On a TON gate it becomes the
+ * BoC that object carries (`bodyBoc`) before the copy: the exact bytes the gate armed, and the only form the TON
+ * account signs. Any other non-text body is refused.
  */
 import type {SwapGate, WriteMethod} from "../gate";
 import {readApprove, SwapGateRefusal} from "../gate";
 
 /** Read-only members the engine calls; passed through untouched. */
-const READS = ["getAddress", "getChainId", "getBalance", "getAllowance", "getTokenInfo", "quoteSendTransaction", "waitForTransaction"] as const;
+const READS = [
+  "getAddress",
+  "getChainId",
+  "getBalance",
+  "getAllowance",
+  "getTokenInfo",
+  "quoteSendTransaction",
+  "waitForTransaction",
+  "getJettonWalletAddress",
+] as const;
 
 /** Write members the engine calls, and the gate's name for each. */
 const WRITES = {
@@ -51,6 +65,16 @@ function snapshot(v: unknown): unknown {
   return freeze(copy);
 }
 
+/** A TON write's cell body → `bodyBoc`, the BoC it was decoded from (see above); everything else as it is. */
+function tonBodyBoc(method: WriteMethod, v: unknown): unknown {
+  if (method !== "sendTransaction" || !v || typeof v !== "object") return v;
+  const {body, ...rest} = v as Record<string, unknown>;
+  if (body === undefined || typeof body === "string") return v;
+  const boc = (body as {__bocBase64?: unknown} | null)?.__bocBase64;
+  if (typeof boc !== "string" || !boc || "bodyBoc" in rest) throw new SwapGateRefusal("A TON message body couldn't be checked against the reviewed route — it was refused before signing.");
+  return {...rest, bodyBoc: boc};
+}
+
 const isAnswered = (e: unknown): boolean => {
   for (let x = e, i = 0; x && typeof x === "object" && i < 6; x = (x as {cause?: unknown}).cause, i++)
     if ((x as {answered?: unknown}).answered === true) return true;
@@ -73,7 +97,7 @@ export function gateAccount<T extends object>(inner: T, gate: SwapGate, window?:
     const fn = src[name];
     if (typeof fn !== "function") continue;
     out[name] = async (...args: unknown[]) => {
-      const raw = snapshot(args[0]);
+      const raw = snapshot(gate.chain.startsWith("ton:") ? tonBodyBoc(method, args[0]) : args[0]);
       if (!gate.consume({chain: gate.chain, method, raw})) throw new SwapGateRefusal();
       const rest = args.slice(1).map(snapshot);
       const approve = method === "sendTransaction" ? readApprove((raw as {data?: unknown} | null)?.data) : null;

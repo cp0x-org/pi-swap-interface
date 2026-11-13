@@ -10,6 +10,9 @@
  *   - the engine gets the GATED account only, `router: appRouter().only(provider)`, `reviewExecution` = checkPlanBrowser
  *     → planWrites → arm (re-armed on a requoted plan), and never `accountChain` / `skipAccountChainCheck` (the live
  *     wallet chain is the identity the engine checks) — engineConfig below is the only place the config is built;
+ *   - a TON payer's engine also gets `decodeTonBody` and `tonGasCeiling` (D35): the decoder keeps the exact BoC of a
+ *     contract call, which checkPlanBrowser reads, planWrites arms and the TON account signs; the TON account only
+ *     signs the reviewed route's own call (tonPlan.ts tonCallOf);
  *   - the gate is disarmed whatever happens; the shared providers are never closed.
  */
 import type {CrossChainRouter} from "@anywalletkit/protocol-swap2-router/router";
@@ -35,10 +38,23 @@ import {assertNearAccount, nearEngineAccount, type NearReads} from "./accounts/n
 import {signingWindow, solanaEngineAccount, type SigningWindow} from "./accounts/solana";
 import {TRON_CHAIN, tronEngineAccount, type TronApi} from "./accounts/tron";
 import type {TonAccountDeps} from "./accounts/ton";
+import type {TonBody} from "./tonGate";
 import {refusal} from "./errors";
-import {checkPlanBrowser, createSwapGate, executionConstraints, planWrites, same, SwapReviewMismatch, type SwapGate, type TronRule, type VenueRule} from "./gate";
+import {
+  checkPlanBrowser,
+  createSwapGate,
+  executionConstraints,
+  planWrites,
+  same,
+  SwapReviewMismatch,
+  TON_BODY_GAS,
+  type SwapGate,
+  type TronRule,
+  type VenueRule,
+} from "./gate";
 import {swapLockName, withSwapLock} from "./locks";
 import {tronRule, venueRule} from "./pins";
+import {tonCallOf} from "./tonPlan";
 
 /** executeSwap's input (mobile ExecuteInput with the signer instead of an account id). */
 export interface ExecuteSwapInput {
@@ -69,14 +85,16 @@ export interface ExecuteDeps {
 
 /**
  * The engine config for one execution: the shared router narrowed to the reviewed venue, the review hook, phases and
- * the one native-fee ceiling below. Deliberately has no `accountChain` / `skipAccountChainCheck` (a unit test asserts
- * the keys).
+ * the one native-fee ceiling below; for a TON payer (`decodeTonBody` given, tonGate.ts captureTonBody) also the cell
+ * body's decoder and its gas ceiling, TON_BODY_GAS (0.5 TON, not the engine's default 1 TON). Deliberately has no
+ * `accountChain` / `skipAccountChainCheck` (a unit test asserts the keys).
  */
 export function engineConfig(o: {
   fromChain: string;
   router: CrossChainRouter;
   reviewExecution: (plan: Swap2ExecutionPlan) => void;
   onExecutionPhase?: (phase: ExecutionPhase, detail?: ExecutionPhaseDetail) => void;
+  decodeTonBody?: (boc: string) => TonBody;
 }): RouterSwap2Config {
   return {
     fromChain: o.fromChain,
@@ -84,6 +102,7 @@ export function engineConfig(o: {
     reviewExecution: o.reviewExecution,
     onExecutionPhase: (phase, detail) => o.onExecutionPhase?.(phase, detail),
     nativeFeeCeiling,
+    ...(o.decodeTonBody ? {decodeTonBody: o.decodeTonBody, tonGasCeiling: TON_BODY_GAS} : {}),
   };
 }
 
@@ -155,15 +174,17 @@ export async function executeSwap(input: ExecuteSwapInput, deps: ExecuteDeps = {
     const gate = createSwapGate(reviewed.fromChain);
     const signWindow = signingWindow();
     const account = await openAccount(input, gate, signWindow, deps);
+    // A TON payer's cell body (D35): the BoC the engine is handed is what is checked, armed and signed.
+    const tonBody = input.signer.family === "ton" ? (await import("./tonGate")).captureTonBody() : undefined;
 
     const rule = (deps.venueRule ?? venueRule)(reviewed.provider);
     const tron = (deps.tronRule ?? tronRule)(reviewed.provider);
     let depositTo: string | undefined;
     let revokes: {token: string; spender: string}[] = [];
     const arm = (plan: Swap2ExecutionPlan) => {
-      const why = checkPlanBrowser(plan, reviewed, rule, tron);
+      const why = checkPlanBrowser(plan, reviewed, rule, tron, tonBody);
       if (why) throw new SwapReviewMismatch(why);
-      const planned = planWrites(plan);
+      const planned = planWrites(plan, tonBody?.boc());
       const s = plan.source;
       depositTo = s.kind === "call" ? s.to : s.kind === "token-transfer" ? s.recipient : undefined;
       // The re-quote pass spends the allowance the first pass granted: its revoke stays armed.
@@ -173,7 +194,13 @@ export async function executeSwap(input: ExecuteSwapInput, deps: ExecuteDeps = {
     const router = deps.router ? deps.router(reviewed.provider) : appRouter().only(reviewed.provider);
     const protocol = new RouterSwap2Protocol(
       account,
-      engineConfig({fromChain: reviewed.fromChain, router, reviewExecution: arm, ...(input.onPhase ? {onExecutionPhase: input.onPhase} : {})}),
+      engineConfig({
+        fromChain: reviewed.fromChain,
+        router,
+        reviewExecution: arm,
+        ...(input.onPhase ? {onExecutionPhase: input.onPhase} : {}),
+        ...(tonBody ? {decodeTonBody: tonBody.decodeTonBody} : {}),
+      }),
     );
     try {
       const res = await protocol.swap2({
@@ -208,9 +235,9 @@ async function openAccount(input: ExecuteSwapInput, gate: SwapGate, signWindow: 
     return gateAccount(raw, gate);
   }
   if (signer.family === "ton") {
-    // A lazy chunk (with @ton/core): only a TON payer loads it.
+    // A lazy chunk (with @ton/core): only a TON payer loads it. It signs no contract call but the reviewed route's own.
     const {tonEngineAccount} = await import("./accounts/ton");
-    const raw = tonEngineAccount(signer, deps.tonAccount ?? {});
+    const raw = tonEngineAccount(signer, deps.tonAccount ?? {}, tonCallOf(reviewed));
     if ((await raw.getAddress()) !== reviewed.refundAddress) throw new SwapReviewMismatch("the connected wallet isn't the reviewed one");
     return gateAccount(raw, gate);
   }

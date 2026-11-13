@@ -181,13 +181,14 @@ const plan = (source: Swap2ExecutionPlan["source"], over: Partial<Swap2Execution
 
 describe("checkTonPlan", () => {
   it("passes a TON or jetton deposit, and refuses approvals, cell bodies and non-mainnet addresses", () => {
-    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n, memo: "m"}))).toBeNull();
-    expect(checkTonPlan(plan({kind: "token-transfer", token: USDT, recipient: DEPOSIT, amount: 5n}))).toBeNull();
-    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n, cellBody: true}))).toMatch(/contract payload/);
-    expect(checkTonPlan(plan({kind: "call", to: `5:${"ab".repeat(32)}`, value: 5n}))).toMatch(/mainnet/);
-    expect(checkTonPlan(plan({kind: "call", to: "kQCrq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6CG", value: 5n}))).toMatch(/mainnet/);
-    expect(checkTonPlan(plan({kind: "token-transfer", token: USDT, recipient: "nope", amount: 5n}))).toMatch(/mainnet/);
-    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n}, {approvals: [{token: USDT, spender: DEPOSIT, amount: 5n}]}))).toMatch(/approval/);
+    const r = reviewedFor(tonToken({}), 5n);
+    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n, memo: "m"}), r)).toBeNull();
+    expect(checkTonPlan(plan({kind: "token-transfer", token: USDT, recipient: DEPOSIT, amount: 5n}), r)).toBeNull();
+    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n, cellBody: true}), r)).toMatch(/contract payload/);
+    expect(checkTonPlan(plan({kind: "call", to: `5:${"ab".repeat(32)}`, value: 5n}), r)).toMatch(/mainnet/);
+    expect(checkTonPlan(plan({kind: "call", to: "kQCrq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6CG", value: 5n}), r)).toMatch(/mainnet/);
+    expect(checkTonPlan(plan({kind: "token-transfer", token: USDT, recipient: "nope", amount: 5n}), r)).toMatch(/mainnet/);
+    expect(checkTonPlan(plan({kind: "call", to: DEPOSIT, value: 5n}, {approvals: [{token: USDT, spender: DEPOSIT, amount: 5n}]}), r)).toMatch(/approval/);
   });
 });
 

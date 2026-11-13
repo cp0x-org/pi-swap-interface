@@ -1,14 +1,21 @@
 /**
- * The TON engine account (D10, D11): the connected TON Connect wallet behind the gate. The engine's two TON writes —
- * `sendTransaction({to, value, body?})`, TON to a deposit address with an optional comment, and
- * `transfer({token, recipient, amount, memo?})`, a jetton deposit — reach this account only after gated.ts consumed
- * the armed write. Each becomes ONE TON Connect message built here, which tonGate.ts's checkTonRequest reads back
- * from its own BoCs against that very write before the wallet sees it; the wallet then signs and broadcasts it.
+ * The TON engine account (D10, D11, D35): the connected TON Connect wallet behind the gate. The engine's TON writes —
+ * `sendTransaction({to, value, body?})`, TON to a deposit address with an optional comment;
+ * `transfer({token, recipient, amount, memo?})`, a jetton deposit; and `sendTransaction({to, value, bodyBoc})`, a
+ * venue's contract call (gated.ts turned the engine's cell body into its exact BoC) — reach this account only after
+ * gated.ts consumed the armed write. Each becomes ONE TON Connect message built here, which tonGate.ts's
+ * checkTonRequest reads back from its own BoCs against that very write before the wallet sees it; the wallet then
+ * signs and broadcasts it.
  *
  * A jetton transfer goes to the payer's own jetton wallet: asked from TonAPI (runtime config `tonApiUrl`), equal to
  * the address computed here from the jetton's pinned wallet code, and proven by its get_wallet_data (owner = the
  * payer, master = the reviewed jetton, balance enough) — the API's answer is checked, never trusted. A jetton without
  * pinned code (only USDT has it) is refused: TonAPI alone could name another jetton's wallet of the payer's.
+ *
+ * A contract call is signed only for the reviewed route's own (`call`, tonPlan.ts tonCallOf; without it a cell body is
+ * refused): `getJettonWalletAddress` names the engine that same proven wallet for the call's jetton, and the message —
+ * that wallet, bounceable, the TON the write attaches, the write's BoC as its payload, byte for byte — goes through
+ * checkTonRequest's jetton-call kind, which reads the BoC again against the reviewed call.
  *
  * Outcomes: TON Connect's error answer, or the SDK's own refusal before it hands the request over, is `answered`
  * (nothing was sent), and so is any failure before an installed wallet (JS bridge) got the request. TON Connect's
@@ -37,13 +44,17 @@ import {
   tonMessageHash,
   type TonExpected,
 } from "../tonGate";
+import type {TonCallExpected} from "../tonPlan";
 
 /** Every member the engine touches on a TON account (engine.md §5.2). */
 export interface TonEngineAccount {
   /** "ton:-239" — the engine's account-chain check. */
   chain: string;
   getAddress(): Promise<string>;
-  sendTransaction(tx: {to: string; value: bigint; body?: string}): Promise<{hash: string}>;
+  /** The payer's jetton wallet for the reviewed call's jetton (the engine binds a contract call's target to it), proven. */
+  getJettonWalletAddress(token: string): Promise<string>;
+  /** `body`: a text comment; `bodyBoc`: a contract call's exact cell body (never both). */
+  sendTransaction(tx: {to: string; value: bigint; body?: string; bodyBoc?: string}): Promise<{hash: string}>;
   transfer(t: {token: string; recipient: string; amount: bigint; memo?: string}): Promise<{hash: string}>;
 }
 
@@ -74,8 +85,8 @@ const randomQueryId = (): bigint => {
 const lostAnswer = (message: string, cause?: unknown, hash?: string): Error =>
   Object.assign(new Error(message, cause === undefined ? undefined : {cause}), {maybeSent: true, ...(hash ? {hash} : {})});
 
-/** Adapt the connected TON Connect wallet to the engine account. */
-export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps = {}): TonEngineAccount {
+/** Adapt the connected TON Connect wallet to the engine account. `call`: the reviewed route's TON contract call, if any. */
+export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps = {}, call?: TonCallExpected): TonEngineAccount {
   const self = mainnetRaw(signer.rawAddress);
   if (!self || mainnetRaw(signer.address) !== self) throw refusal("The TON wallet's address can't be read — nothing was sent.");
   const fetchImpl = deps.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
@@ -175,12 +186,28 @@ export function tonEngineAccount(signer: TonSourceSigner, deps: TonAccountDeps =
 
   const boc = (cell: ReturnType<typeof commentCell>) => Buffer.from(cell.toBoc()).toString("base64");
 
+  const unsigned = () => refusal("This TON deposit carries a contract payload, which isn't signed here — nothing was sent.");
+
   return {
     chain: "ton:-239",
     getAddress: async () => signer.address,
+    async getJettonWalletAddress(token) {
+      // Only the reviewed call's jetton: any other is refused before TonAPI is asked.
+      if (!call || mainnetRaw(token) === null || mainnetRaw(token) !== mainnetRaw(call.jetton)) throw unsigned();
+      return jettonWallet(call.jetton, call.amount);
+    },
     async sendTransaction(tx) {
-      only(tx, ["to", "value", "body"], "transaction");
-      if (tx.body !== undefined && typeof tx.body !== "string") throw refusal("This TON deposit carries a contract payload, which isn't signed here — nothing was sent.");
+      only(tx, ["to", "value", "body", "bodyBoc"], "transaction");
+      if (tx.bodyBoc !== undefined) {
+        // A venue's contract call: its exact BoC, from the payer's proven jetton wallet, checked again on the request.
+        if (!call || tx.body !== undefined || typeof tx.bodyBoc !== "string" || !tx.bodyBoc) throw unsigned();
+        const address = messageAddress(tx.to);
+        if (!address || typeof tx.value !== "bigint" || tx.value <= 0n) throw refusal("This TON contract call is malformed — nothing was sent.");
+        const jw = await jettonWallet(call.jetton, call.amount);
+        const req = request({address, amount: tx.value.toString(), payload: tx.bodyBoc});
+        return send(req, {kind: "jetton-call", jettonWallet: jw, value: tx.value, bodyBoc: tx.bodyBoc, call});
+      }
+      if (tx.body !== undefined && typeof tx.body !== "string") throw unsigned();
       const address = messageAddress(tx.to);
       if (!address || typeof tx.value !== "bigint" || tx.value <= 0n) throw refusal("This TON deposit is malformed — nothing was sent.");
       const req = request({address, amount: tx.value.toString(), ...(tx.body !== undefined ? {payload: boc(commentCell(tx.body))} : {})});
